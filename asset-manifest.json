@@ -1,13 +1,13 @@
 {
   "main.css": "/flai/static/css/main.f01ebbbf.chunk.css",
-  "main.js": "/flai/static/js/main.d2de45f8.chunk.js",
-  "main.js.map": "/flai/static/js/main.d2de45f8.chunk.js.map",
+  "main.js": "/flai/static/js/main.50418484.chunk.js",
+  "main.js.map": "/flai/static/js/main.50418484.chunk.js.map",
   "runtime~main.js": "/flai/static/js/runtime~main.5aaa3636.js",
   "runtime~main.js.map": "/flai/static/js/runtime~main.5aaa3636.js.map",
-  "static/js/2.c88c70e5.chunk.js": "/flai/static/js/2.c88c70e5.chunk.js",
-  "static/js/2.c88c70e5.chunk.js.map": "/flai/static/js/2.c88c70e5.chunk.js.map",
+  "static/js/2.7209c8fa.chunk.js": "/flai/static/js/2.7209c8fa.chunk.js",
+  "static/js/2.7209c8fa.chunk.js.map": "/flai/static/js/2.7209c8fa.chunk.js.map",
   "index.html": "/flai/index.html",
-  "precache-manifest.94e4897284bbb209c87e1607cbbe05a4.js": "/flai/precache-manifest.94e4897284bbb209c87e1607cbbe05a4.js",
+  "precache-manifest.dc42aaa5e3339bf2f6bdcfca396b03f8.js": "/flai/precache-manifest.dc42aaa5e3339bf2f6bdcfca396b03f8.js",
   "service-worker.js": "/flai/service-worker.js",
   "static/css/main.f01ebbbf.chunk.css.map": "/flai/static/css/main.f01ebbbf.chunk.css.map",
   "static/media/index.css": "/flai/static/media/index.9509d4cb.jpg"
