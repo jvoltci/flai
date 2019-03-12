@@ -1,11 +1,11 @@
 self.__precacheManifest = [
   {
-    "revision": "50418484f88c79579ea8",
+    "revision": "a14e53ee8b023c30eff0",
     "url": "/flai/static/css/main.f01ebbbf.chunk.css"
   },
   {
-    "revision": "50418484f88c79579ea8",
-    "url": "/flai/static/js/main.50418484.chunk.js"
+    "revision": "a14e53ee8b023c30eff0",
+    "url": "/flai/static/js/main.a14e53ee.chunk.js"
   },
   {
     "revision": "5aaa363694ede916b16b",
@@ -20,7 +20,7 @@ self.__precacheManifest = [
     "url": "/flai/static/media/index.9509d4cb.jpg"
   },
   {
-    "revision": "87e0d9304e5d1f373650b8fa429c1edb",
+    "revision": "ce0292aea9a55a1bdcac64548fcf92e5",
     "url": "/flai/index.html"
   }
 ];
