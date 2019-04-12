@@ -13,7 +13,7 @@ class App extends Component {
 
   render() {
     return (
-      <HashRouter >
+      <HashRouter>
         <Switch>
           <Route path='/' component={() => { return( <Home trigger={this.trigger} /> ) } } exact />
           <Route path='/play' component={() => { window.location = 'https://flai-api.herokuapp.com/play'; return null; } } />
