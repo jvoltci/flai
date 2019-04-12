@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "www.flai.ml/precache-manifest.f70a1181c61a6336f6c16e16fa68db2f.js"
+  "www.flai.ml/precache-manifest.3052bfeb1d5447f9c1056ba90a1d7a73.js"
 );
 
 workbox.clientsClaim();
