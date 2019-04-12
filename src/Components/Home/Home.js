@@ -18,7 +18,7 @@ const Home = ({ trigger }) => {
                 <option value=".mkv">.mkv</option>
                 <option value=".mp3">.mp3</option>
               </datalist>
-              <button type="submit" class="btn btn-danger">Download</button>
+              <button onSubmit={() => setTimeout(() => trigger(), 200)} type="submit" class="btn btn-danger">Download</button>
             </div>
           </form>
         </div>
