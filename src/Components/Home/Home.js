@@ -21,7 +21,8 @@ class App extends Component {
       list: 0,
       files: [],
       url: '',
-      password: ''
+      password: '',
+      magnetSubmit: 0
     }
   }
 
@@ -47,13 +48,18 @@ class App extends Component {
           }})
         .then(res => res.json())
         .then(res => {
-          this.setState({files: res, list: 1, extension: ''})
+          this.setState({files: res, list: 1, magnetSubmit: 0})
         })
         .catch(error => console.error('Error:', error));
   }
 
+  handleMagnet = (e) => {
+    e.preventDefault();
+    this.setState({magnetSubmit: 1});
+  }
+
   componentDidUpdate() {
-    if(this.state.extension === "magnet") {
+    if(this.state.magnetSubmit === 1) {
       this.handleTorrent();
     }
   }
@@ -64,7 +70,7 @@ class App extends Component {
         <h3 id="u1">Welcome To fl<span id="u11">ai</span> Downloads</h3>
         <div className="row">
           <div className="col-12" align="center">
-            <form onSubmit={e => this.state.extension==="magnet"?e.preventDefault():''} method="post" action="https://flai-api.herokuapp.com/download" >
+            <form onSubmit={e => this.state.extension==="magnet"?this.handleMagnet(e):''} method="post" action="https://flai-api.herokuapp.com/download" >
               <div className="form-group">
                 <input onChange={(e) => this.changeURL(e)}
                  type="text" name="user[url]" required className="form-control" placeholder="Downloadable URL | Magnet URI" id="u2" />

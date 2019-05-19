@@ -34,12 +34,12 @@
   color: rgb(220, 53, 69);
   font-weight: bold;
 }
-
+*::-webkit-scrollbar { width: 0 !important }
 .ulist {
   width: 400px;
   height: 200px;
   border: 1px solid #aaa;
-  overflow: hidden;
+  overflow: auto;
 }
 .vlist {
   list-style: none;
@@ -48,7 +48,7 @@
   height: 100%;
   margin-right: -50px; /* maximum width of scrollbar */
   padding-right: 50px; /* maximum width of scrollbar */
-  overflow-y: scroll;
+  
 }
 .litem::before {
   content: "• ";
