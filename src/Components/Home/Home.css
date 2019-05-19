@@ -31,5 +31,26 @@
 }
 
 .link {
-  color: rgb(220, 53, 69)
+  color: rgb(220, 53, 69);
+  font-weight: bold;
+}
+
+.ulist {
+  width: 400px;
+  height: 200px;
+  border: 1px solid #aaa;
+  overflow: hidden;
+}
+.vlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  margin-right: -50px; /* maximum width of scrollbar */
+  padding-right: 50px; /* maximum width of scrollbar */
+  overflow-y: scroll;
+}
+.litem::before {
+  content: "• ";
+  color: rgb(220, 53, 69); /* or whatever color you prefer */
 }

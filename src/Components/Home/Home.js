@@ -3,11 +3,13 @@ import './Home.css';
 
 
 const List = ({ items }) => (
-  <ul>
+  <ul className="ulist">
+    <ul className="vlist">
       {
-        items.map((item) => <li><a className="link" href={"https://flai-api.heroku.com/torrent/"+ item}>{item}</a></li>)
+        items.map((item) => <li className="litem"><a className="link" href={"https://flai-api.herokuapp.com/torrent/"+ item}>{item}</a></li>)
       }
     </ul>
+  </ul>
   );
 
 class App extends Component {
@@ -43,9 +45,11 @@ class App extends Component {
           headers: {
             "Content-Type": "application/json"
           }})
+        .then(res => res.json())
         .then(res => {
-          this.setState({files: res, list: 1})
+          this.setState({files: res})
         })
+        .then(() => {console.log(this.state.files); this.setState({list: 1})})
   }
 
   componentDidUpdate() {
@@ -58,9 +62,6 @@ class App extends Component {
       <div id="home" className="container">
         <h3 id="u1">Welcome To fl<span id="u11">ai</span> Downloads</h3>
         <div className="row">
-
-          { this.state.list? <List items={this.state.files} />: '' }
-
           <div className="col-12" align="center">
             <form onSubmit={e => this.state.extension==="magnet"?e.preventDefault():''} method="post" action="https://flai-api.heroku.com/download" >
               <div className="form-group">
@@ -82,6 +83,7 @@ class App extends Component {
                 <button type="submit" className="btn btn-danger">Download</button>
               </div>
             </form>
+            { this.state.list? <List items={this.state.files} />: '' }
           </div>
         </div>
       </div>
