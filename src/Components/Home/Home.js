@@ -37,7 +37,7 @@ class App extends Component {
 
 
   handleTorrent = () => {
-    fetch('https://flai-api.heroku.com/metadata', {
+    fetch('https://flai-api.herokuapp.com/metadata', {
           method: "POST",
           body: JSON.stringify({url: this.state.url, password: this.state.password}),
           headers: {
