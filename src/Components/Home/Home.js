@@ -63,7 +63,7 @@ class App extends Component {
 
   handleMagnet = (e) => {
     e.preventDefault();
-    this.setState({magnetSubmit: 1});
+    this.setState({list: 0, magnetSubmit: 1});
   }
 
   componentDidUpdate() {
