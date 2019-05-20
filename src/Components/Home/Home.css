@@ -40,6 +40,7 @@
   height: 200px;
   border: 1px solid #aaa;
   overflow: auto;
+  scrollbar-width: none;
   overflow: -moz-scrollbars-none;
   -ms-overflow-style: none;
 }

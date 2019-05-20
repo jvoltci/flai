@@ -18,8 +18,8 @@ class App extends Component {
     super();
     this.state = {
       extension: '',
-      list: 1,
-      files: ["aldknfkjsnkjsndkjndljdsnsdkjndskjnsdkjbdshkjbfsjhbdshj", "dslknf", "sdld", "sdld", "sdld", "sdld", "sdld", "sdld", "sdld", "sdld"],
+      list: 0,
+      files: [],
       url: '',
       password: '',
       magnetSubmit: 0
