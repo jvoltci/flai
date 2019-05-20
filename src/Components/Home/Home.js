@@ -48,7 +48,10 @@ class App extends Component {
           }})
         .then(res => res.json())
         .then(res => {
-          this.setState({files: res, list: 1, magnetSubmit: 0})
+          if(res)
+            this.setState({files: res, list: 1, magnetSubmit: 0});
+          else
+            console.log("Vanilla Error");
         })
         .catch(error => console.error('Error:', error));
   }
