@@ -50,10 +50,15 @@ class App extends Component {
         .then(res => {
           if(res)
             this.setState({files: res, list: 1, magnetSubmit: 0});
-          else
+          else {
+            this.setState({magnetSubmit: 2});
             console.log("Vanilla Error");
+          }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          this.setState({magnetSubmit: 2});
+          console.error('Error:', error);
+        });
   }
 
   handleMagnet = (e) => {
@@ -92,6 +97,13 @@ class App extends Component {
               </div>
             </form>
 
+            {
+              this.state.magnetSubmit === 1
+              ?
+              <div className="lds-hourglass"></div>
+              :
+              (this.state.magnetSubmit === 0? <div></div>: <div className="error">Oops! Something went wrong.</div>)
+            }
             { this.state.list? <List items={this.state.files} />: '' }
 
           </div>
