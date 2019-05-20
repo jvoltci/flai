@@ -40,6 +40,8 @@
   height: 200px;
   border: 1px solid #aaa;
   overflow: auto;
+  overflow: -moz-scrollbars-none;
+  -ms-overflow-style: none;
 }
 .vlist {
   list-style: none;
