@@ -79,12 +79,10 @@ class App extends Component {
                  type="text" name="user[url]" required className="form-control" placeholder="Downloadable URL | Magnet URI" id="u2" />
                 <input onChange={(e) => this.changePassword(e)}
                  type="password" name="user[password]" required className="form-control" placeholder="Password" id="u3" />
-                 <br/>
+                 <p/>
                 <button id="buttonS" type="submit" className="btn btn-danger btn-lg">Download</button>
               </div>
             </form>
-            <br/>
-            <br/>
 
             {
               this.state.magnetSubmit === 1

@@ -93,7 +93,7 @@
 
 .error {
   font-style: italic;
-  color: #f9ff00;
+  color: red;
   font-weight: 450;
 }
 
