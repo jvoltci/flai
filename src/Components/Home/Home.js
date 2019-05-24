@@ -72,7 +72,7 @@ class App extends Component {
       <div id="home" className="container">
         <h3 id="u1">Welcome To fl<span id="u11">ai</span> Downloads</h3>
         <div className="row">
-          <div className="col-12" align="center">
+          <div className="col-md-12" align="center">
             <form onSubmit={e => this.state.url.substring(0, 6)==="magnet"?this.handleMagnet(e):''} method="post" action="https://flai-api.herokuapp.com/download" >
               <div className="form-group">
                 <input onChange={(e) => this.changeURL(e)}
@@ -80,7 +80,7 @@ class App extends Component {
                 <input onChange={(e) => this.changePassword(e)}
                  type="password" name="user[password]" required className="form-control" placeholder="Password" id="u3" />
                  <br/>
-                <button type="submit" className="btn btn-danger btn-lg">Download</button>
+                <button id="buttonS" type="submit" className="btn btn-danger btn-lg">Download</button>
               </div>
             </form>
             <br/>
