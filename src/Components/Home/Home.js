@@ -17,17 +17,12 @@ class App extends Component {
   constructor() {
     super();
     this.state = {
-      extension: '',
       list: 0,
       files: [],
       url: '',
       password: '',
       magnetSubmit: 0
     }
-  }
-
-  changeExtension = (event) => {
-    this.setState({extension: event.target.value});     
   }
 
   changeURL = (event) => {
@@ -78,24 +73,18 @@ class App extends Component {
         <h3 id="u1">Welcome To fl<span id="u11">ai</span> Downloads</h3>
         <div className="row">
           <div className="col-12" align="center">
-            <form onSubmit={e => this.state.extension==="magnet"?this.handleMagnet(e):''} method="post" action="https://flai-api.herokuapp.com/download" >
+            <form onSubmit={e => this.state.url.substring(0, 6)==="magnet"?this.handleMagnet(e):''} method="post" action="https://flai-api.herokuapp.com/download" >
               <div className="form-group">
                 <input onChange={(e) => this.changeURL(e)}
                  type="text" name="user[url]" required className="form-control" placeholder="Downloadable URL | Magnet URI" id="u2" />
                 <input onChange={(e) => this.changePassword(e)}
                  type="password" name="user[password]" required className="form-control" placeholder="Password" id="u3" />
-                <input 
-                  onChange={(e) => this.changeExtension(e)} 
-                  list="extension" name="user[extension]" required className="extension" placeholder="Extension" id="u4" />
-                <datalist id="extension" >
-                  <option value=".zip">.zip</option>
-                  <option value=".mp4">.mp4</option>
-                  <option value=".exe">.exe</option>
-                  <option value="magnet">magnet</option>
-                </datalist>
-                <button type="submit" className="btn btn-danger">Download</button>
+                 <br/>
+                <button type="submit" className="btn btn-danger btn-lg">Download</button>
               </div>
             </form>
+            <br/>
+            <br/>
 
             {
               this.state.magnetSubmit === 1
