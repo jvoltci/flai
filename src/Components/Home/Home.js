@@ -61,6 +61,10 @@ class App extends Component {
     this.setState({list: 0, magnetSubmit: 1});
   }
 
+  handleElse = (e) => {
+    this.setState({list: 0})
+  }
+
   componentDidUpdate() {
     if(this.state.magnetSubmit === 1) {
       this.handleTorrent();
@@ -73,7 +77,7 @@ class App extends Component {
         <h3 id="u1">Welcome To fl<span id="u11">ai</span> Downloads</h3>
         <div className="row">
           <div className="col-md-12" align="center">
-            <form onSubmit={e => this.state.url.substring(0, 6)==="magnet"?this.handleMagnet(e):''} method="post" action="https://flai-api.herokuapp.com/download" >
+            <form onSubmit={e => this.state.url.substring(0, 6)==="magnet"?this.handleMagnet(e):this.handleElse(e)} method="post" action="https://flai-api.herokuapp.com/download" >
               <div className="form-group">
                 <input onChange={(e) => this.changeURL(e)}
                  type="text" name="user[url]" required className="form-control" placeholder="Downloadable URL | Magnet URI" id="u2" />
