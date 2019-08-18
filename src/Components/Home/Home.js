@@ -26,11 +26,11 @@ class App extends Component {
   }
 
   changeURL = (event) => {
-    this.setState({url: event.target.value});     
+    this.setState({url: event.target.value});
   }
 
   changePassword = (event) => {
-    this.setState({password: event.target.value});     
+    this.setState({password: event.target.value});
   }
 
 
@@ -97,9 +97,11 @@ class App extends Component {
             }
             { this.state.list? <List items={this.state.files} />: '' }
 
+
           </div>
         </div>
       </div>
+
     );
   }
 }
