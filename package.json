@@ -1,5 +1,4 @@
 {
-  //Warning - Keep Homepage undefined for gh-pages issue
   "homepage": "",
   "name": "flai",
   "version": "0.1.0",
