@@ -5,8 +5,8 @@ import App from './App';
 
 import * as serviceWorker from './serviceWorker';
 
-const debug =
-  process.env.NODE_ENV === "production" ? void 0 : new DebugEngine();
+/*const debug =
+  process.env.NODE_ENV === "production" ? void 0 : new DebugEngine();*/
 
 ReactDOM.render(<App />, document.getElementById('root'));
 
