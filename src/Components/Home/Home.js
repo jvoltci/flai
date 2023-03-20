@@ -6,7 +6,7 @@ const List = ({ items }) => (
   <ul className="ulist">
     <ul className="vlist">
       {
-        items.map((item, i) => <li key={i} className="litem"><a className="link" href={"https://flai-api.herokuapp.com/torrent/"+ item}>{item}</a></li>)
+        items.map((item, i) => <li key={i} className="litem"><a className="link" href={"https://flai-api.onrender.com/torrent/"+ item}>{item}</a></li>)
       }
     </ul>
   </ul>
@@ -35,7 +35,7 @@ class App extends Component {
 
 
   handleTorrent = () => {
-    fetch('https://flai-api.herokuapp.com/metadata', {
+    fetch('https://flai-api.onrender.com/metadata', {
           method: "POST",
           body: JSON.stringify({url: this.state.url, password: this.state.password}),
           headers: {
@@ -77,7 +77,7 @@ class App extends Component {
         <h3 id="u1">Welcome To fl<span id="u11">ai</span> Downloads</h3>
         <div className="row">
           <div className="col-md-12" align="center">
-            <form onSubmit={e => this.state.url.substring(0, 6)==="magnet"?this.handleMagnet(e):this.handleElse(e)} method="post" action="https://flai-api.herokuapp.com/download" >
+            <form onSubmit={e => this.state.url.substring(0, 6)==="magnet"?this.handleMagnet(e):this.handleElse(e)} method="post" action="https://flai-api.onrender.com/download" >
               <div className="form-group">
                 <input onChange={(e) => this.changeURL(e)}
                  type="text" name="user[url]" required className="form-control" placeholder="Downloadable URL | Magnet URI" id="u2" />
