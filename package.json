@@ -1,32 +1,26 @@
 {
-  "homepage": "https://jvoltci.github.io/flai",
   "name": "flai",
-  "version": "0.1.0",
+  "version": "3.0.0",
+  "description": "flai — torrent-to-HTTP browser client",
   "private": true,
-  "dependencies": {
-    "react": "^16.14.0",
-    "react-dom": "^16.14.0",
-    "react-router-dom": "^4.3.1",
-    "react-scripts": "^2.1.8"
-  },
+  "type": "module",
+  "homepage": "https://jvoltci.github.io/flai",
   "scripts": {
-    "start": "react-scripts --openssl-legacy-provider start",
-    "build": "react-scripts --openssl-legacy-provider build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
-  "eslintConfig": {
-    "extends": "react-app"
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
-  "browserslist": [
-    ">0.2%",
-    "not dead",
-    "not ie <= 11",
-    "not op_mini all"
-  ],
   "devDependencies": {
-    "gh-pages": "^2.2.0"
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "gh-pages": "^6.2.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
   }
 }

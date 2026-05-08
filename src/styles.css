@@ -1,0 +1,207 @@
+/* === Base — preserved from the original CRA build ============================== */
+*::-webkit-scrollbar { width: 0 !important }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: sans-serif;
+}
+
+body {
+  background-color: #000;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+footer.footer {
+  width: 100%;
+  color: white;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  text-align: center;
+}
+
+footer.footer a {
+  color: white;
+  text-decoration: none;
+}
+
+.container {
+  min-height: 100%;
+  margin-bottom: -40px;
+  padding-bottom: 40px;
+}
+
+/* === Original Home.css branding (preserved) =================================== */
+#u1 {
+  color: rgb(220, 53, 69);
+  padding-top: 2%;
+  text-align: center;
+  font-family: "Times New Roman", Times, red serif;
+  font-size: 50px;
+}
+#u11 {
+  color: teal;
+  font-weight: bold;
+}
+
+#u2, #u3, #u4 {
+  background: transparent;
+  color: red;
+  margin-top: 2%;
+  border: 1px solid #000000;
+}
+
+#u4 {
+  padding-bottom: 0.5%;
+  border-radius: 4px;
+}
+
+.form-group {
+  margin-top: 8%;
+}
+
+.btn.btn-danger {
+  margin-left: 2%;
+}
+
+.link {
+  color: rgb(220, 53, 69);
+  font-weight: bold;
+}
+
+.ulist {
+  width: 400px;
+  max-width: 90vw;
+  height: 200px;
+  border: 1px solid #aaa;
+  overflow: auto;
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
+  -ms-overflow-style: none;
+  margin: 0 auto;
+}
+.vlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  margin-right: -50px;
+  padding-right: 50px;
+}
+.litem::before {
+  content: "• ";
+  color: rgb(220, 53, 69);
+}
+.litem {
+  padding: 4px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.litem .file-meta {
+  color: #888;
+  font-size: 11px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* === Original hourglass spinner (preserved) =================================== */
+.lds-hourglass {
+  display: inline-block;
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+.lds-hourglass:after {
+  content: " ";
+  display: block;
+  border-radius: 50%;
+  width: 0;
+  height: 0;
+  margin: 6px;
+  box-sizing: border-box;
+  border: 26px solid #fff;
+  border-color: red transparent red transparent;
+  animation: lds-hourglass 1.2s infinite;
+}
+@keyframes lds-hourglass {
+  0%   { transform: rotate(0);    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19); }
+  50%  { transform: rotate(900deg); animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1); }
+  100% { transform: rotate(1800deg); }
+}
+
+.error {
+  font-style: italic;
+  color: red;
+  font-weight: 450;
+  text-align: center;
+  margin-top: 12px;
+}
+
+#buttonS { margin-right: 1.5em; }
+
+/* === New, layered on top (zip / player / per-file actions) ==================== */
+.meta-head {
+  text-align: center;
+  margin: 16px 0 8px;
+  color: #444;
+  font-size: 13px;
+}
+.meta-head strong {
+  color: rgb(220, 53, 69);
+}
+
+.zip-row {
+  text-align: center;
+  margin-top: 12px;
+}
+.zip-row .btn {
+  margin: 0 4px;
+}
+
+.player-wrap {
+  max-width: 720px;
+  margin: 24px auto 0;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+}
+.player-wrap h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  word-break: break-word;
+  color: #222;
+}
+.player-wrap video {
+  width: 100%;
+  border-radius: 4px;
+  background: #000;
+  display: block;
+}
+.player-close {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: rgb(220, 53, 69);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.player-close:hover { text-decoration: underline; }
+
+.litem .play-btn {
+  background: none;
+  border: none;
+  color: rgb(220, 53, 69);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 6px;
+  font-size: 13px;
+}
+.litem .play-btn:hover { text-decoration: underline; }
