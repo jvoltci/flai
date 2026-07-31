@@ -92,71 +92,69 @@ export function App() {
   }, [meta]);
 
   return (
-    <div id="home" className="container">
+    <div id="home" className="n-container">
       <h3 id="u1">
         Welcome To fl<span id="u11">ai</span> Downloads
       </h3>
-      <div className="row">
-        <div className="col-md-12" style={{ textAlign: 'center' }}>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <input
-                onChange={(e) => setUrl(e.target.value)}
-                type="text"
-                name="user[url]"
-                required
-                className="form-control"
-                placeholder="Downloadable URL | Magnet URI"
-                id="u2"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <input
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                name="user[password]"
-                required
-                className="form-control"
-                placeholder="Password"
-                id="u3"
-                autoComplete="current-password"
-              />
-              <p />
-              <button id="buttonS" type="submit" className="btn btn-danger btn-lg">
-                Download
-              </button>
+      <div style={{ textAlign: 'center' }}>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <input
+              onChange={(e) => setUrl(e.target.value)}
+              type="text"
+              name="user[url]"
+              required
+              className="n-input"
+              placeholder="Downloadable URL | Magnet URI"
+              id="u2"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <input
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              name="user[password]"
+              required
+              className="n-input"
+              placeholder="Password"
+              id="u3"
+              autoComplete="current-password"
+            />
+            <p />
+            <button id="buttonS" type="submit" className="n-btn n-btn-fill n-btn-lg">
+              Download
+            </button>
+          </div>
+        </form>
+
+        {magnetSubmit === 1 && <div className="lds-hourglass" />}
+        {magnetSubmit === 2 && <div className="error">{errorMsg}</div>}
+
+        {list === 1 && meta && (
+          <>
+            <div className="meta-head">
+              <strong>{meta.name}</strong> · {formatBytes(meta.size)}
             </div>
-          </form>
-
-          {magnetSubmit === 1 && <div className="lds-hourglass" />}
-          {magnetSubmit === 2 && <div className="error">{errorMsg}</div>}
-
-          {list === 1 && meta && (
-            <>
-              <div className="meta-head">
-                <strong>{meta.name}</strong> · {formatBytes(meta.size)}
-              </div>
-              <List meta={meta} api={api} onPlay={handlePlay} />
-              <div className="zip-row">
-                <a className="btn btn-outline-danger btn-sm" href={api.zipUrl(meta.infoHash)}>
-                  Download all (.zip)
-                </a>
-              </div>
-            </>
-          )}
-
-          {player && meta && (
-            <div className="player-wrap">
-              <h4>{player.name}</h4>
-              <video controls autoPlay src={api.fileUrl(player.infoHash, player.fileIndex)}>
-                Your browser does not support the video element.
-              </video>
-              <button type="button" className="player-close" onClick={() => setPlayer(null)}>
-                close player
-              </button>
+            <List meta={meta} api={api} onPlay={handlePlay} />
+            <div className="zip-row">
+              <a className="n-btn n-btn-sm" href={api.zipUrl(meta.infoHash)}>
+                Download all (.zip)
+              </a>
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {player && meta && (
+          <div className="player-wrap">
+            <h4>{player.name}</h4>
+            <video controls autoPlay src={api.fileUrl(player.infoHash, player.fileIndex)}>
+              Your browser does not support the video element.
+            </video>
+            <button type="button" className="player-close" onClick={() => setPlayer(null)}>
+              close player
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

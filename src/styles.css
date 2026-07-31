@@ -1,3 +1,12 @@
+/* === nilam design system (replaces the Bootstrap 4 CDN link) ==================
+ * Order matters: tokens → scale → base → components. nilam.tokens.css declares the
+ * @layer order, so everything below in this file is unlayered and therefore beats it.
+ * No tailwind.css import — this project does not use Tailwind. */
+@import 'nilam/tokens.css';
+@import 'nilam/scale.css';
+@import 'nilam/base.css';
+@import 'nilam/components.css';
+
 /* === Base — preserved from the original CRA build ============================== */
 *::-webkit-scrollbar { width: 0 !important }
 
@@ -30,7 +39,15 @@ footer.footer a {
   text-decoration: none;
 }
 
-.container {
+/* Replaces Bootstrap's `py-3` utility (1rem block padding). `text-center` was
+   redundant — footer.footer already centres. nilam has no spacing utilities. */
+.footer-copyright {
+  padding-block: var(--space-4);
+}
+
+/* Was `.container` (Bootstrap's). The element now carries `.n-container` for its
+   width/gutters; this keeps the sticky-footer offset, keyed off the id instead. */
+#home {
   min-height: 100%;
   margin-bottom: -40px;
   padding-bottom: 40px;
@@ -63,10 +80,6 @@ footer.footer a {
 
 .form-group {
   margin-top: 8%;
-}
-
-.btn.btn-danger {
-  margin-left: 2%;
 }
 
 .link {
@@ -143,7 +156,9 @@ footer.footer a {
   margin-top: 12px;
 }
 
-#buttonS { margin-right: 1.5em; }
+/* margin-left was on the removed `.btn.btn-danger` rule; kept here so the submit
+   button sits exactly where it did. */
+#buttonS { margin-right: 1.5em; margin-left: 2%; }
 
 /* === New, layered on top (zip / player / per-file actions) ==================== */
 .meta-head {
@@ -160,7 +175,7 @@ footer.footer a {
   text-align: center;
   margin-top: 12px;
 }
-.zip-row .btn {
+.zip-row .n-btn {
   margin: 0 4px;
 }
 
