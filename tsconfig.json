@@ -2,6 +2,9 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Without this, `import.meta.env` in src/App.tsx is a type error — TS only knows the
+    // bare ImportMeta. vite/client also declares the asset-import and HMR types.
+    "types": ["vite/client"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",

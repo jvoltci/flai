@@ -1,222 +1,273 @@
 /* === nilam design system (replaces the Bootstrap 4 CDN link) ==================
  * Order matters: tokens → scale → base → components. nilam.tokens.css declares the
- * @layer order, so everything below in this file is unlayered and therefore beats it.
- * No tailwind.css import — this project does not use Tailwind. */
+ * @layer order. No tailwind.css import — this project does not use Tailwind. */
 @import 'nilam/tokens.css';
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
 @import 'nilam/components.css';
 
-/* === Base — preserved from the original CRA build ============================== */
-*::-webkit-scrollbar { width: 0 !important }
+/* Everything flai adds goes in @layer nilam.utilities, which is the last layer nilam
+ * declares — the same thing demo/index.html does with its page-local rules.
+ *
+ * The previous version of this file was UNLAYERED, and unlayered author CSS beats every
+ * cascade layer no matter how weak its selector. That is how `#u2, #u3 { color: red }`
+ * managed to beat `.n-input` entirely: not because an id is strong, but because being
+ * outside the layer stack put it above the whole system. Inside nilam.utilities a local
+ * rule still wins over nilam.components, but only by one step, so the next accidental
+ * override shows up as a specificity question instead of an invisible bypass.
+ *
+ * There is not one colour literal below this line. Every value is a nilam token. The whole
+ * project has exactly one exception and it is documented where it sits: the
+ * <meta name="theme-color"> in index.html, which must be a literal and cannot take var().
+ */
+@layer nilam.utilities {
+  /* ── the page and the photograph ──────────────────────────────────────────
+   *
+   * The photograph is part of flai's identity so it stays, but nothing reads text off it
+   * any more. Measured, on public/index.jpg downsampled to 32x18 so each sample is a
+   * ~60px area rather than one stray pixel:
+   *
+   *   brightest patch of sky   sRGB(217,233,191)   Y 0.768   OKLab L 0.92
+   *   sea, bottom quarter      sRGB(19,22,26)      Y 0.007
+   *
+   * --neutral-12 in dark mode is oklch(0.7430 …), Y 0.410. Against that brightest patch:
+   *
+   *   bare photo        1.78:1   fails everything
+   *   one --scrim       2.99:1   fails even the 3:1 large-text floor
+   *   two --scrim       6.78:1   passes 1.4.3 body text at 4.5:1
+   *
+   * Hence two layers, in index.html. Alpha composites in gamma-encoded sRGB, so 0.6 black
+   * twice multiplies the image by 0.4 twice = 0.16 — an effective alpha of 0.84 that is
+   * still composed entirely from a token, where a hand-written 0.84 would not be.
+   *
+   * Two layers also fixes a second thing. One layer leaves that patch at OKLab L 0.47,
+   * which is LIGHTER than --surface (0.2455), so an .n-card over it reads as a hole
+   * rather than a raised surface and --rim's top light points the wrong way. Two layers
+   * bring it to L 0.262 — level with the card, and darker everywhere else in the frame.
+   *
+   * Confirmed against the rendered page rather than left as arithmetic: sampling the brightest
+   * 1/256 of the photo where no card covers it gives sRGB(36,37,31), Y 0.0180, L 0.262 —
+   * within one 8-bit step of the prediction above.
+   *
+   * The scrim is atmosphere. The guarantee is that every piece of text on this page sits
+   * on an .n-card, never on the photo.
+   */
+  body {
+    /* Painted under the JPEG, so the first frame is a nilam colour and not white. */
+    background-color: var(--neutral-1);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  font-family: sans-serif;
-}
+    /* Sticky footer, without position: absolute — see the footer note below. */
+    display: flex;
+    flex-direction: column;
+    min-block-size: 100dvh;
+  }
 
-body {
-  background-color: #000;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
+  /* Takes the free space so the footer lands at the bottom of a short page, and is pushed
+     by content on a tall one. `1 0 auto`, not `1`: flex-basis 0 would let a tall #root
+     shrink below its content height. */
+  #root { flex: 1 0 auto; }
 
-footer.footer {
-  width: 100%;
-  color: white;
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  text-align: center;
-}
+  /* ── footer ───────────────────────────────────────────────────────────────
+   *
+   * Was `position: absolute; left: 0; bottom: 0` with no positioned ancestor anywhere in
+   * the tree, so `bottom: 0` resolved against the initial containing block — the FIRST
+   * viewport, not the document. Any page taller than the screen painted the footer on top
+   * of its own content; with the player open it sat across the video.
+   *
+   * The fix is to stop positioning it. body is a flex column and #root takes the slack, so
+   * the footer is in normal flow and cannot overlap anything.
+   *
+   * `color: white` became --neutral-11: still the quiet step, but a solved one. The link
+   * is .n-link, so it is --brand-11 with a --brand-8 underline instead of white with
+   * text-decoration removed, which left it indistinguishable from the text beside it. */
+  footer.footer {
+    inline-size: 100%;
+    text-align: center;
+    color: var(--neutral-11);
+    font-size: var(--text-00);
+  }
 
-footer.footer a {
-  color: white;
-  text-decoration: none;
-}
+  /* Replaces Bootstrap's `py-3`. nilam has no spacing utilities on purpose. */
+  .footer-copyright { padding-block: var(--space-4); }
 
-/* Replaces Bootstrap's `py-3` utility (1rem block padding). `text-center` was
-   redundant — footer.footer already centres. nilam has no spacing utilities. */
-.footer-copyright {
-  padding-block: var(--space-4);
-}
+  /* ── the shell ────────────────────────────────────────────────────────────
+   *
+   * .n-container is 72rem, which is right for a dashboard and much too wide for one form
+   * and one file table — the fields would run to 1150px and become unscannable. 46rem caps
+   * them at a length the eye can track, and lets the photograph frame the content instead
+   * of being wallpaper behind a full-bleed page. */
+  .flai-shell { max-inline-size: 46rem; }
+  #home { padding-block: var(--space-7) var(--space-8); }
+  .flai-noscript { padding-block: var(--space-7); }
 
-/* Was `.container` (Bootstrap's). The element now carries `.n-container` for its
-   width/gutters; this keeps the sticky-footer offset, keyed off the id instead. */
-#home {
-  min-height: 100%;
-  margin-bottom: -40px;
-  padding-bottom: 40px;
-}
+  /* ── the one display moment ───────────────────────────────────────────────
+   *
+   * --text-display at --weight-thin. nilam.scale.css says of the display size: "Weight 200
+   * at this size, never 700: large type gets its presence from size, and adding weight to
+   * both is why 'bold and big' reads as shouting rather than as confidence." One element on
+   * the page uses it, which is what a display size is for.
+   *
+   * nilam.base sets -0.02em on every heading, tuned for heading sizes. At the top of the
+   * clamp — 7.5rem, 120px at a 1280px viewport — that still reads loose, so -0.045em, the
+   * value the nilam showcase uses on its own display heading. */
+  .flai-word {
+    font-size: var(--text-display);
+    font-weight: var(--weight-thin);
+    line-height: 0.9;
+    letter-spacing: -0.045em;
+  }
+  /* --brand-11, not --brand-9. Step 11 is the text step, solved for 4.5:1 against step 3;
+     step 9 is the solid, and using it as text is the mistake it invites. `font-weight:
+     inherit` because <b> is UA-bold and bold at 120px is exactly what the note above
+     forbids — the tag is here for the stylistic offset, not for weight. */
+  .flai-word b { font-weight: inherit; color: var(--brand-11); }
 
-/* === Original Home.css branding (preserved) =================================== */
-#u1 {
-  color: rgb(220, 53, 69);
-  padding-top: 2%;
-  text-align: center;
-  font-family: "Times New Roman", Times, red serif;
-  font-size: 50px;
-}
-#u11 {
-  color: teal;
-  font-weight: bold;
-}
+  .flai-eyebrow {
+    font: var(--weight-medium) var(--text-000) / 1 var(--font-mono);
+    letter-spacing: var(--tracking-micro);
+    text-transform: uppercase;
+    color: var(--neutral-11);
+  }
+  /* 42ch rather than --measure (65ch): this sits in a 46rem card next to a 120px word, and
+     65ch would run the full width and fight it. */
+  .flai-lede {
+    font-size: var(--text-2);
+    color: var(--neutral-11);
+    max-inline-size: 42ch;
+  }
 
-#u2, #u3, #u4 {
-  background: transparent;
-  color: red;
-  margin-top: 2%;
-  border: 1px solid #000000;
-}
+  /* .n-stack is a 16px gap, which is right between a form field and the next field and too
+     much between a label-ish line and the thing it labels. */
+  .flai-tight { gap: var(--space-2); }
+  .flai-hero { gap: var(--space-5); }
 
-#u4 {
-  padding-bottom: 0.5%;
-  border-radius: 4px;
-}
+  /* Torrent and file names are long, unspaced and user-supplied. Without break-word one
+     name sets the width of the whole card. */
+  .flai-title {
+    font-size: var(--text-3);
+    overflow-wrap: anywhere;
+  }
 
-.form-group {
-  margin-top: 8%;
-}
+  /* ── fields ───────────────────────────────────────────────────────────────
+   *
+   * nilam styles the invalid input as `.n-input:user-invalid`, which only fires on a real
+   * constraint violation. "Not a magnet URI" is flai's own rule on a type="text" field, so
+   * the browser considers it valid and the border stayed --neutral-7 while the .n-error text
+   * below it said otherwise — measured, in Chrome. nilam has no [aria-invalid] hook.
+   *
+   * These two lines are a copy of nilam's own :user-invalid declarations, same tokens, so an
+   * app-validated field looks identical to a browser-validated one. Reported upstream. */
+  .n-input[aria-invalid='true'] { border-color: var(--danger-8); }
+  .n-input[aria-invalid='true']:focus-visible { box-shadow: 0 0 0 var(--ring-width) var(--danger-6); }
 
-.link {
-  color: rgb(220, 53, 69);
-  font-weight: bold;
-}
+  /* ── the file list ────────────────────────────────────────────────────────
+   *
+   * The product. It was an unstyled <ul> nested inside another <ul> — invalid markup, and
+   * a 400x200px scroll box with the scrollbar hidden. Now a real .n-table inside the card.
+   *
+   * Capped so a 300-file torrent cannot push the zip button off the page. 26rem is about
+   * seven rows at the measured row height, which is where the old 200px box topped out —
+   * but this one shows its scrollbar and takes tabindex="0", which is the 2.1.1 point
+   * nilam's .n-table-scroll note makes.
+   *
+   * The old stylesheet hid every scrollbar in the app with
+   * `*::-webkit-scrollbar { width: 0 !important }`. Removed: the scrollbar is the only
+   * signal that this region scrolls, and without it a capped list looks like a truncated
+   * one. That rule was also an unlayered !important on the universal selector. */
+  .flai-files {
+    max-block-size: 26rem;
+    overflow-y: auto;
+  }
+  .flai-name {
+    overflow-wrap: anywhere;
+    min-inline-size: 11rem;
+  }
+  /* Right-aligns the SIZE header over .n-table-num's tabular figures. */
+  .flai-th-num { text-align: end; }
+  /* .n-table-num sets tabular figures and end alignment but not nowrap. Measured at 420px:
+     every size cell broke as "1.4 / GB", which makes a numeric column look broken. */
+  .n-table-num { white-space: nowrap; }
+  /* nowrap so Play and Save never stack; the row height is set by the name cell. */
+  .flai-actions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
 
-.ulist {
-  width: 400px;
-  max-width: 90vw;
-  height: 200px;
-  border: 1px solid #aaa;
-  overflow: auto;
-  scrollbar-width: none;
-  overflow: -moz-scrollbars-none;
-  -ms-overflow-style: none;
-  margin: 0 auto;
-}
-.vlist {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  height: 100%;
-  margin-right: -50px;
-  padding-right: 50px;
-}
-.litem::before {
-  content: "• ";
-  color: rgb(220, 53, 69);
-}
-.litem {
-  padding: 4px 0;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.litem .file-meta {
-  color: #888;
-  font-size: 11px;
-  white-space: nowrap;
-  margin-left: auto;
-}
+  /* Four columns do not fit on a phone. Measured at 420px: the card gives the table 372px,
+     and name (11rem min) + Kind badge + Size + Play + Save wants about 460px, so Play and
+     Save — the primary action of the whole app — were clipped at the card edge and only
+     reachable by horizontally scrolling the region.
+     Kind is the column that goes, because it is the only one derivable from what is left: a
+     Play button in the row already says the file is streamable, and the extension is in the
+     name.
+     40rem is a margin, not a measured edge, and that is deliberate: the real threshold moves
+     with the longest file name in the torrent, which is user-supplied, so there is no single
+     width to find. 420px is where it was seen failing; 640px is where it is switched. */
+  @media (max-width: 39.99rem) {
+    .n-table :is(th, td):nth-child(2) { display: none; }
+    .flai-name { min-inline-size: 8rem; }
+  }
 
-/* === Original hourglass spinner (preserved) =================================== */
-.lds-hourglass {
-  display: inline-block;
-  position: relative;
-  width: 64px;
-  height: 64px;
-}
-.lds-hourglass:after {
-  content: " ";
-  display: block;
-  border-radius: 50%;
-  width: 0;
-  height: 0;
-  margin: 6px;
-  box-sizing: border-box;
-  border: 26px solid #fff;
-  border-color: red transparent red transparent;
-  animation: lds-hourglass 1.2s infinite;
-}
-@keyframes lds-hourglass {
-  0%   { transform: rotate(0);    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19); }
-  50%  { transform: rotate(900deg); animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1); }
-  100% { transform: rotate(1800deg); }
-}
+  /* The row being played. --brand-2 is the brand's "subtle page" step: oklch(0.2126 0.02 285)
+     in dark mode against the card's oklch(0.2455 0 285), so the row reads a shade darker and
+     faintly violet — enough to find without competing with the glow on the button in the same
+     row. This rule lands in nilam.utilities so it also beats .n-table tbody tr:hover, which is
+     correct: hovering the playing row should not erase which row is playing. */
+  .n-table tr[data-playing] td { background: var(--brand-2); }
 
-.error {
-  font-style: italic;
-  color: red;
-  font-weight: 450;
-  text-align: center;
-  margin-top: 12px;
-}
+  /* ── loading ──────────────────────────────────────────────────────────────
+   *
+   * There was nothing here at all, on the one action in the app that takes ten seconds.
+   *
+   * .n-skeleton is nearly invisible on an .n-card in dark mode, and it is a token collision
+   * rather than a mistake in either place. .n-card paints --surface, oklch(0.2455 0 285) in
+   * dark mode; .n-skeleton's base gradient stop is --neutral-3, oklch(0.2455 0.0070 285) —
+   * the SAME lightness, differing only by 0.007 of chroma. Measured on screen: only the
+   * --neutral-4 shimmer stop (L 0.273) showed at all, and only while travelling.
+   *
+   * So the loading card drops to --neutral-2 (L 0.2120), which puts a whole step of the ramp
+   * under the skeleton. Reported upstream rather than papered over — it affects nilam's own
+   * showcase, which also puts skeletons on .n-card.
+   *
+   * Row pitch matched to the real thing. Measured in Chrome at 1280px: a .n-table row is
+   * 53px — --text-0 content plus .n-table td's var(--space-3) top and bottom padding — and a
+   * 22px skeleton line on a var(--space-6) gap is 54px. One pixel per row. The row COUNT is
+   * the part that cannot be known before the metadata lands, so the card still changes
+   * height when it arrives; that is a limit of the situation, not of the skeleton. */
+  .flai-loading-card { background: var(--neutral-2); }
+  .flai-skeleton-list { gap: var(--space-6); }
+  .flai-skeleton-list .n-cluster { justify-content: space-between; }
+  .flai-skeleton-row { block-size: 1.375rem; }
+  .flai-skeleton-name { inline-size: 55%; }
+  .flai-skeleton-size { inline-size: 4rem; }
+  /* Stands in for the h2 + badge row, so the skeleton is the shape of the card and not just
+     a stack of lines. */
+  .flai-skeleton-title { block-size: 1.5rem; inline-size: 60%; }
 
-/* margin-left was on the removed `.btn.btn-danger` rule; kept here so the submit
-   button sits exactly where it did. */
-#buttonS { margin-right: 1.5em; margin-left: 2%; }
-
-/* === New, layered on top (zip / player / per-file actions) ==================== */
-.meta-head {
-  text-align: center;
-  margin: 16px 0 8px;
-  color: #444;
-  font-size: 13px;
+  /* ── player ───────────────────────────────────────────────────────────────
+   *
+   * Was `.player-wrap`: a hand-rolled rgba(255,255,255,0.85) card with `h4 { color: #222 }`
+   * sitting on a dark page — a light card in a dark app, off-token on both counts. It is an
+   * .n-card now and the heading sets no colour at all, so it inherits --neutral-12 and
+   * follows the mode.
+   *
+   * It also moved ABOVE the file list. Below it, on any torrent with more than a handful of
+   * files, clicking Play scrolled the video off the bottom of the screen and the click
+   * looked like it had done nothing.
+   *
+   * --neutral-1 for the letterbox, not black: a true black is the one value on this page
+   * nilam has no token for, and step 1 is the page colour, which is what a letterbox is. */
+  .flai-video {
+    inline-size: 100%;
+    border-radius: var(--r-3);
+    background: var(--neutral-1);
+  }
+  .flai-player-head {
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
 }
-.meta-head strong {
-  color: rgb(220, 53, 69);
-}
-
-.zip-row {
-  text-align: center;
-  margin-top: 12px;
-}
-.zip-row .n-btn {
-  margin: 0 4px;
-}
-
-.player-wrap {
-  max-width: 720px;
-  margin: 24px auto 0;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.85);
-}
-.player-wrap h4 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  word-break: break-word;
-  color: #222;
-}
-.player-wrap video {
-  width: 100%;
-  border-radius: 4px;
-  background: #000;
-  display: block;
-}
-.player-close {
-  margin-top: 8px;
-  background: none;
-  border: none;
-  color: rgb(220, 53, 69);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-.player-close:hover { text-decoration: underline; }
-
-.litem .play-btn {
-  background: none;
-  border: none;
-  color: rgb(220, 53, 69);
-  font-weight: bold;
-  cursor: pointer;
-  padding: 0 6px;
-  font-size: 13px;
-}
-.litem .play-btn:hover { text-decoration: underline; }

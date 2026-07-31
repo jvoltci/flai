@@ -4,19 +4,47 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/flai.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <!-- The sRGB of --neutral-1 in dark mode, oklch(0.1750 0.0070 285) — the colour body
+         paints under the photograph. Converted through OKLab rather than eyeballed; the same
+         conversion reproduces nilam's own published #8a7ef7 for --brand-9, and #202020 for
+         --surface, which is what the rendered card measures. A <meta> value must be a colour
+         literal, so this is the ONE place in the project that cannot use var(). It was
+         #0a0a0a, which matched nothing in the palette. Re-derive if the hue is re-solved. -->
+    <meta name="theme-color" content="#101014" />
     <meta name="description" content="flai — paste a magnet, stream or download in your browser." />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <style>body { background-image: url('%BASE_URL%index.jpg'); }</style>
+    <!-- The photograph stays here rather than moving to styles.css because the path needs
+         Vite's %BASE_URL% substitution. The scrim rides along for the same reason: it has
+         to be a background LAYER above the image, and layers cannot be split across two
+         rules. --scrim twice, not once — the measurement is in src/styles.css. -->
+    <style>
+      body {
+        background-image:
+          linear-gradient(var(--scrim), var(--scrim)),
+          linear-gradient(var(--scrim), var(--scrim)),
+          url('%BASE_URL%index.jpg');
+      }
+    </style>
     <title>flai</title>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div class="n-container flai-noscript">
+        <div class="n-note n-note-warn">
+          <span class="n-note-glyph" aria-hidden="true">!</span>
+          <div>
+            <span class="n-note-title">JavaScript is off.</span>
+            flai fetches the file list and drives the player in the browser, so it needs
+            scripting enabled.
+          </div>
+        </div>
+      </div>
+    </noscript>
     <div id="root"></div>
     <footer class="footer">
       <div class="footer-copyright">
         ©<script>document.write(new Date().getFullYear());</script><span>&nbsp;Copyright:</span>
-        <a target="_blank" rel="noopener noreferrer" href="https://jvoltci.github.io/ivehement/">Vehement</a>
+        <a class="n-link" target="_blank" rel="noopener noreferrer" href="https://jvoltci.github.io/ivehement/">Vehement</a>
       </div>
     </footer>
     <script type="module" src="/src/main.tsx"></script>

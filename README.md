@@ -35,10 +35,16 @@ npm run deploy             # publishes dist/ to gh-pages branch
 ## Stack
 
 - Vite 5 + React 18 + TypeScript (strict)
-- Plain CSS (no UI library) — small bundle, no theme runtime
+- [nilam](https://jvoltci.github.io/nilam/) for colour and components — one `@import`, no theme
+  runtime and no JS. Every colour on the page is a nilam token; the page is forced dark with
+  `<html class="dark">`, so step 9 is the L 0.66 glow and `--brand-ink` follows it.
 - Range-aware `<video>` for seeking while the swarm is still pulling chunks
 
-Bundle size: ~47 KB gzipped JS, ~1.3 KB gzipped CSS.
+Bundle size, from `npm run build`: **48.3 KB gzipped JS, 8.7 KB gzipped CSS**
+(149.8 KB / 38.6 KB raw). The CSS is almost entirely nilam — tokens, scale, base and the whole
+`.n-*` component layer, plus the second P3 palette behind `@media (color-gamut: p3)`. flai's own
+stylesheet is 88 lines of rules and contains no colour literal at all; the only one in the
+project is `<meta name="theme-color">`, which cannot take `var()`.
 
 ## What got modernized (v3.0)
 
