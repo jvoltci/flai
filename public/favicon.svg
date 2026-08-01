@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="flai">
+  <!--
+    One shape, because a favicon is 16 physical pixels and anything with two ideas in it turns
+    to mush at that size. The wordmark was the other candidate: "fl" plus a violet "ai" is the
+    identity, but four letterforms in 16px is a smudge, and a lone "f" says nothing.
+
+    Colours are the same two the page uses, as literals — an SVG in /public is not processed by
+    Vite, so it cannot reach nilam's custom properties. #101014 is --neutral-1 in dark mode and
+    the value already duplicated in <meta name="theme-color">; #8a7ef7 is nilam's published
+    --brand-9. Re-derive both if the palette is re-solved.
+  -->
+  <style>
+    .tile { fill: #101014 }
+    .mark { stroke: #8a7ef7 }
+    /* Browser chrome in light mode puts this on a pale bar, where a near-black tile reads as a
+       hole. Inverting keeps the mark the brand colour and the tile out of the way. */
+    @media (prefers-color-scheme: light) {
+      .tile { fill: #ffffff }
+      .mark { stroke: #6a5cf0 }
+    }
+  </style>
+  <rect class="tile" width="32" height="32" rx="7" />
+  <path
+    class="mark"
+    d="M16 7v13m-6-6 6 6 6-6M9.5 25h13"
+    fill="none"
+    stroke-width="3.25"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

@@ -2,7 +2,12 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/flai.png" />
+    <!-- SVG first so Chrome and Firefox take the crisp, theme-aware one; the PNG stays as the
+         fallback for Safari, which does not do SVG favicons. Order matters: browsers pick the
+         last icon they understand, so the PNG must come first. -->
+    <link rel="icon" type="image/png" href="%BASE_URL%flai.png" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <link rel="apple-touch-icon" href="%BASE_URL%flai.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- The sRGB of --neutral-1 in dark mode, oklch(0.1750 0.0070 285) — the colour body
          paints under the photograph. Converted through OKLab rather than eyeballed; the same
