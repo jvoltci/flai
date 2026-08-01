@@ -304,9 +304,12 @@ export function App() {
         {/* The honest footnote. This page runs on a free 512 MB box with no disk, so it serves
             one file at a time through a sliding window. The desktop app is the same idea with
             none of that: it has a disk, so it takes every file at once, at whatever speed the
-            swarm gives, and survives being closed. Shown only when idle — once a torrent is
-            open, an advert for a different program is in the way. */}
-        {!settled && (
+            swarm gives, and survives being closed.
+
+            On the locked screen only. Someone looking at the password field has not chosen
+            between the two yet, so this is the one moment the choice is useful; past it they
+            are using this one, and an advert for a different program is just in the way. */}
+        {!signedIn && (
           <p className="n-hint flai-centred flai-native">
             <a href={DESKTOP_RELEASES} target="_blank" rel="noreferrer">
               Get the desktop app
