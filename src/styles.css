@@ -276,64 +276,25 @@
   }
   .flai-player-meta { gap: var(--space-2); }
 
-  /* ── v4: the shell ────────────────────────────────────────────────────────
+  /* ── the activity line ────────────────────────────────────────────────────
    *
-   * The hero lost its card. In v3 the whole app was one form, so a card around the wordmark
-   * and the form was the app. v4 is a tablist over three panels, and a card around the
-   * wordmark would have put a card inside a card on every panel — nilam's --rim top light
-   * reads as a raised edge, and two nested edges make the panel look like a dialog. So the
-   * hero is bare on the scrim and every panel is the card.
+   * One row per download, and no progress bar. Chrome's own download bar already draws one,
+   * and a second bar next to it was most of what made the three-tab version feel heavy.
    *
-   * The scrim still guarantees the rule the measurements in this file exist for: no text sits
-   * on the photograph. The wordmark and the eyebrow are the exception, and they are
-   * --text-display and --text-000 respectively — 1.4.3 exempts neither, which is why the two
-   * --scrim layers bring the brightest patch to 6.78:1 rather than to the 3:1 large-text
-   * floor. */
-  .flai-brand {
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: var(--space-4);
-  }
-
-  /* The count of unfinished downloads, inside the tab label. Pulled tight to the text and
-     given tabular figures so the tab does not jitter as the number changes width. */
-  .flai-tab-badge {
-    margin-inline-start: var(--space-2);
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* ── the queue ────────────────────────────────────────────────────────────
-   *
-   * A <ul> of cards rather than a table, and that is the one place v4 departs from v3's
-   * shape on purpose. A table row cannot hold a progress bar that spans its full width
-   * without a colspan trick, and the progress bar is the primary information here — the
-   * numbers under it are the caption, not the content. */
-  .flai-jobs {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .flai-job-head {
+   * What this row is actually for is the state the browser cannot know: "waking the bridge"
+   * — the free tier cold-starting mid-download while the service worker retries. To Chrome
+   * that is just a stream that has gone quiet for a minute. */
+  .flai-activity {
     justify-content: space-between;
     gap: var(--space-3);
   }
-  /* File names are long, unspaced and user-supplied; without this one name sets the card
-     width and the status badge is pushed off the edge. */
-  .flai-job-name {
+  /* File names are long, unspaced and user-supplied; without this one name sets the width of
+     the card and pushes the badge off the edge. */
+  .flai-activity-name {
     overflow-wrap: anywhere;
     min-inline-size: 0;
-    font-weight: var(--weight-medium);
+    flex: 1 1 12rem;
   }
-  .flai-job-meta {
-    gap: var(--space-3);
-    align-items: baseline;
-  }
-  /* The percentage is the one figure the eye goes to first, so it gets the text step rather
-     than the hint step, and tabular figures so 9% and 99% occupy the same width. */
-  .flai-job-figure {
-    font-variant-numeric: tabular-nums;
-    font-size: var(--text-1);
-    color: var(--neutral-12);
-  }
-  .flai-job-actions { gap: var(--space-2); }
+  /* Tabular figures so the row does not jitter as 9% becomes 10%. */
+  .flai-activity-figure { font-variant-numeric: tabular-nums; }
 }

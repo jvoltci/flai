@@ -11,17 +11,6 @@ export function formatSpeed(bytesPerSec: number): string {
   return `${formatBytes(bytesPerSec)}/s`;
 }
 
-/** Rounded to whole units on purpose: a download ETA that reads "4m 03s" implies a precision
- *  a BitTorrent swarm does not have. */
-export function formatEta(secondsLeft: number): string {
-  if (!Number.isFinite(secondsLeft) || secondsLeft <= 0) return '—';
-  if (secondsLeft < 60) return `${Math.ceil(secondsLeft)}s`;
-  const m = Math.floor(secondsLeft / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return h < 24 ? `${h}h ${m % 60}m` : `${Math.floor(h / 24)}d ${h % 24}h`;
-}
-
 export function formatPercent(done: number, total: number): string {
   if (!total) return '0%';
   return `${Math.floor((done / total) * 100)}%`;

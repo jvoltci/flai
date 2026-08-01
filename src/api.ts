@@ -54,6 +54,11 @@ export class ApiClient {
     return this.#token !== null;
   }
 
+  /** The service worker does its own fetching, so it needs the token handed to it. */
+  get token(): string | null {
+    return this.#token;
+  }
+
   signOut(): void {
     this.#token = null;
     sessionStorage.removeItem(TOKEN_KEY);
@@ -80,22 +85,6 @@ export class ApiClient {
     });
   }
 
-  /** Raw Response so the caller can stream the body straight to disk instead of buffering. */
-  async chunk(
-    infoHash: string,
-    fileIndex: number,
-    start: number,
-    end: number,
-    signal?: AbortSignal
-  ): Promise<Response> {
-    const res = await fetch(`${this.baseUrl}/torrent/${infoHash}/${fileIndex}`, {
-      headers: { Range: `bytes=${start}-${end}`, ...this.#auth() },
-      signal,
-    });
-    if (res.status === 206 || res.status === 200) return res;
-    throw await this.#error(res);
-  }
-
   /* Token in the query string, because a <video src> and an EventSource cannot set headers.
    * That is why tokens expire: a URL leaks in a way a header does not. */
   streamUrl(infoHash: string, fileIndex: number, attachment = false): string {
@@ -119,15 +108,6 @@ export class ApiClient {
     // Let EventSource handle its own reconnection; only report that the feed is down.
     source.onerror = () => onTick({ active: false });
     return () => source.close();
-  }
-
-  async health(): Promise<boolean> {
-    try {
-      const res = await fetch(`${this.baseUrl}/healthz`, { cache: 'no-store' });
-      return res.ok;
-    } catch {
-      return false;
-    }
   }
 
   #auth(): Record<string, string> {

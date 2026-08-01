@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ApiClient, FileEntry, Metadata, TorrentStats } from '../api';
-import { probeFile, playlistBlobUrl, type Verdict } from '../probe';
-import { formatBytes, formatSpeed } from '../format';
+import type { ApiClient, FileEntry, Metadata, TorrentStats } from './api';
+import { probeFile, playlistBlobUrl, type Verdict } from './probe';
+import { formatBytes, formatSpeed } from './format';
 
 interface PlayerProps {
   api: ApiClient;

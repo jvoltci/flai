@@ -1,70 +1,77 @@
 # flai
 
-A download manager that lives in a browser tab. Paste a magnet, pick a file, walk away — bytes
-go straight to your disk in 8 MB slices, and it resumes from the exact byte after a server
-restart, a spin-down, or a dropped connection.
+Paste a magnet, click Save, and the file lands in your Downloads folder. No picker, no
+permission prompt, no queue to manage — and it keeps going through server restarts, cold
+starts and dropped connections without telling you about it.
 
-The bytes come from [flai-api](https://github.com/jvoltci/flai-api), a bridge that holds 64 MB
-of torrent pieces and forgets the rest. This side is the part that actually downloads.
+One page. The bytes come from [flai-api](https://github.com/jvoltci/flai-api), a bridge that
+holds 64 MB of torrent pieces and forgets the rest.
 
-**Chrome and Edge only**, deliberately — see below.
+**Chrome or Edge**, because the download runs through a service worker.
 
-## Why the browser does the work
+## How the download works
 
-flai-api runs on a free tier with 512 MB of RAM, no disk, and a 15-minute sleep timer. Nothing
-durable can live there. So the browser owns everything:
+flai-api never serves a whole file — every response is clamped to 16 MB — so a download is a
+few hundred separate `Range` requests that have to be stitched back together. The obvious ways
+to do that in a page are both bad: buffering into a Blob needs the whole file in RAM, and the
+File System Access API means a folder picker and a permission prompt on every resume.
 
-| State | Where |
+So [`public/sw.js`](public/sw.js) does it instead. A service worker can answer a request with a
+`ReadableStream`, so it invents one URL, replies with the right `Content-Length` and
+`Content-Disposition`, and feeds it slice by slice:
+
+```
+page                     service worker                    flai-api
+ │  postMessage(job) ──────►│
+ │  <a href="__flai-dl">    │
+ │  click ─────────────────►│  Range: bytes=0-8388607  ──────►│
+ │                          │◄────────────────────────────────│
+ │◄── one native download ──│  Range: bytes=8388608-…  ──────►│
+ │    (Chrome's own bar)    │◄──── 409 not_active ────────────│
+ │                          │  POST /metadata (the magnet) ──►│
+ │◄── still one download ───│  Range: bytes=8388608-…  ──────►│
+```
+
+The retry loop is on the worker's side of that stream, which is the whole point. Chrome sees a
+single uninterrupted download; the free tier spinning down mid-transfer is invisible.
+
+**The one thing this cannot do is resume after the tab closes.** A native download cannot be
+restarted at an offset, so if the stream dies for good, it dies. That is the trade for having
+no prompts: everything that actually goes wrong is handled silently, and the one unrecoverable
+case is the one you control.
+
+## Tests
+
+`public/sw.js` lives outside the bundle, so TypeScript never sees it and a typo there is a
+broken download. `npm test` runs it in Node against a fake bridge that lies, stalls and drops
+connections, and asserts the bytes that come out are byte-for-byte the file that went in:
+
+| | |
 |---|---|
-| the magnet | IndexedDB |
-| which bytes are done | IndexedDB |
-| the file you're writing into | a `FileSystemFileHandle` in IndexedDB |
-| your save folder | a `FileSystemDirectoryHandle` in IndexedDB |
-| the token | `sessionStorage` |
-
-The server can be restarted, redeployed or wiped mid-download and nothing is lost. When a slice
-comes back `409 not_active`, the manager silently re-posts the magnet it already has and carries
-on. A cold start is a pause in a progress bar, not an error.
-
-## Two implementation details that matter
-
-**The chunk loop has no timers.** Chrome clamps `setTimeout` in a hidden tab to once a minute
-after five minutes. A loop scheduled on timers would crawl the moment you switch tabs — exactly
-when a long download is running. So the loop is a chain of awaited fetches, which the throttler
-does not touch. The only timer is the retry backoff, where waiting a minute is harmless.
-
-**Bytes are piped, not buffered.** Each response body is written into a
-`FileSystemWritableFileStream` as it arrives, so peak memory is a few hundred KB regardless of
-file size, and there is no second copy in browser storage to hit a quota.
-
-The cost of writing directly to your disk: a writable commits on `close()`, not on `write()`.
-flai closes it on pause, on completion, and on `pagehide`. **A hard browser crash loses the
-bytes written since the last commit** — resume then restarts from the file's real size on disk,
-never from zero. Committing more often is not free: reopening with `keepExistingData` copies the
-file so far, which for a 4 GB download would cost tens of GB of disk churn.
-
-## Why Chrome/Edge only
-
-`showDirectoryPicker()` and `showSaveFilePicker()` are Chrome/Edge only; Firefox and Safari ship
-only OPFS, which would mean staging the whole file in browser storage and copying it out — 2×
-the disk space and a quota ceiling well under 10 GB. Direct-to-disk was the deliberate choice.
+| clean 20 MB run | byte-for-byte, correct headers |
+| bridge forgets the torrent (`409`) | file intact, magnet re-posted exactly once |
+| connection drops mid-slice | nothing lost, nothing duplicated |
+| network gone entirely | recovers |
+| 500s and a busy window | recovers |
+| expired token | fails cleanly instead of looping forever |
+| progress messages | throttled to ~1/MB, not ~305 |
 
 ## Playback
 
-`streamable` on a file means "audio or video", not "your browser can play this". v3 handed
-`.mkv` to a `<video>` element and showed an empty player. Now flai reads the first 256 KB,
-identifies the container and codecs, and says so:
+`streamable` means "audio or video", not "your browser can play this". v3 handed `.mkv` to a
+`<video>` and showed an empty player. Now flai reads the first 256 KB, identifies the container
+and codecs, and says which:
 
 - **plays** — MP4/WebM with codecs Chrome decodes. Seeking works; the bridge serves 16 MB at a
   time, so a jump backwards past its window makes it restart the torrent — a stall, not a
   failure.
 - **partial** — a container Chrome accepts holding something it does not decode, like DTS or
-  AC-3. You get a warning instead of silence.
-- **no** — Matroska, H.265, and friends. One button hands the stream to VLC, mpv or IINA as a
-  two-line `.m3u`, and they play it fine over the same `Range`-capable URL.
+  AC-3. A warning instead of silence.
+- **no** — Matroska, H.265 and friends. One button hands the stream to VLC, mpv or IINA as a
+  two-line `.m3u`; they play it fine over the same URL.
 
-No WASM remuxer. It would rescue exactly one case (H.264 in MKV) for a 2–3 MB payload, a worker
-and a MediaSource pipeline, and still could not help H.265.
+No WASM remuxer. It would rescue only H.264-in-MKV for a 2–3 MB payload and still not help
+H.265.
 
 ## Quick start
 
@@ -72,76 +79,63 @@ and a MediaSource pipeline, and still could not help H.265.
 cp .env.example .env       # VITE_API_URL=http://localhost:5000 for a local bridge
 npm install
 npm run dev                # http://localhost:5173/flai/
-```
-
-```bash
-npm run typecheck          # tsc --noEmit
+npm test                   # the download engine, no network
 npm run build              # typecheck, then dist/
 npm run deploy             # publishes dist/ to gh-pages
 ```
 
-`vite.config.ts` sets `base: '/flai/'` for `https://jvoltci.github.io/flai/`. Override with
-`VITE_BASE=/` for a root-domain host.
+**`npm run deploy` does not build.** It is `gh-pages -d dist`, so it publishes whatever is
+already in `dist/`. Always `npm run build && npm run deploy`.
+
+Service workers need HTTPS or localhost, so downloads work on `localhost` and on GitHub Pages,
+but not over a plain-HTTP LAN address.
 
 ## Config
 
 | env | default | meaning |
 |---|---|---|
 | `VITE_API_URL` | `https://flai-api.onrender.com` | flai-api base URL |
-| `VITE_BASE` | `/flai/` | Vite base path |
+| `VITE_BASE` | `/flai/` | Vite base path; also the service worker's scope |
 
 ## Layout
 
 ```
+public/sw.js        the download engine — retries, re-adds, streams   ← read this one
 src/
-├── App.tsx                shell, tabs, health banner
-├── api.ts                 session token, metadata, chunk fetch, SSE
-├── download-manager.ts    the queue and the chunk loop        ← read this one
-├── idb.ts                 IndexedDB: jobs + the folder handle
-├── probe.ts               container/codec sniff → playability verdict
-├── format.ts              bytes, speed, ETA
-├── env.d.ts               the File System Access types TS 7 omits
-├── styles.css             nilam import + flai's own layer
-└── components/
-    ├── Tabs.tsx           nilam's tablist contract, reimplemented in React
-    ├── SignIn.tsx         one field, once per tab
-    ├── Browse.tsx         magnet form + file table
-    ├── Downloads.tsx      the queue, with progress and ETA
-    ├── Player.tsx         video + verdict + external-player handoff
-    └── Settings.tsx       save folder, session, and the limits written down
+├── App.tsx         the whole page: sign in, magnet, file list, activity
+├── Player.tsx      video + codec verdict + external-player handoff
+├── downloader.ts   registers the worker, hands it a job, clicks a link
+├── api.ts          session token, metadata, stream URL, SSE stats
+├── probe.ts        container/codec sniff → playability verdict
+├── format.ts       bytes and percentages
+└── styles.css      nilam import + flai's own layer
+test/sw.test.js     the download engine against a bridge that misbehaves
 ```
 
 ## Design system
 
-Everything visual is [nilam](https://jvoltci.github.io/nilam/) 0.5 — one `@import`, no theme
-runtime, no JS. Every colour on the page is a nilam token. The page is forced dark with
+Everything visual is [nilam](https://jvoltci.github.io/nilam/) 0.6 — one `@import`, no theme
+runtime, no JS. Every colour is a nilam token; the page is forced dark with
 `<html class="dark">`.
 
-v4 is a tablist over three panels rather than one long form, so the hero lost its card: a card
-around the wordmark would have put a card inside a card on every panel, and nilam's `--rim` top
-light makes two nested edges read as a dialog. The queue is a `<ul>` of cards rather than a
-table, because a progress bar spanning a table row needs a `colspan` trick and the bar is the
-primary information here, not the caption.
+The activity line under the form is deliberately **not** a progress bar. Chrome's download bar
+already draws one, and a second bar beside it was most of what made the earlier three-tab
+version feel heavy. What that line is for is the state Chrome cannot know: *waking the bridge*
+— the free tier cold-starting mid-download while the worker retries. To Chrome that is just a
+stream that has gone quiet for a minute.
 
-`Tabs.tsx` reimplements nilam's `tabs()` behaviour in React rather than importing it — that
-module wires a tablist by mutating roles, ids and tabindex, which is the one thing not to do
-inside React. The markup contract is unchanged, including `aria-selected` as the styling hook:
-nilam drives the underline off it on purpose, so an inaccessible tablist visibly loses its
-selected state instead of silently working.
-
-Build output: **69 KB gzipped JS, 12.5 KB gzipped CSS**. The CSS is almost entirely nilam;
-flai's own layer contains no colour literal. The project has exactly one, documented where it
-sits: `<meta name="theme-color">` in `index.html`, which cannot take `var()`.
+Build output: **~66 KB gzipped JS, ~12.6 KB gzipped CSS**. flai's own CSS layer contains no
+colour literal. The project has exactly one, documented where it sits: `<meta
+name="theme-color">` in `index.html`, which cannot take `var()`.
 
 ## Changed in v4
 
 | | v3 | v4 |
 |---|---|---|
-| What it does | fetch a file list, stream one video | a real download queue with resume |
-| Big downloads | one un-retried request; any blip restarted from zero | 8 MB slices, retried forever, resumed from the exact byte |
-| Saving | a browser download link | direct to a folder you pick once |
-| Progress | none | per-file bar, speed, ETA, peers over SSE |
-| Password | typed on every fetch, sent in every body | once per tab, exchanged for a 12 h token |
-| Playback | extension guess, empty player on MKV | codec probe, plain-English verdict, VLC handoff |
-| Layout | one scrolling form | Downloads / Browse / Settings |
+| Big downloads | one un-retried request; any blip restarted from zero | 8 MB slices stitched into one native download, retried forever |
+| Saving | browser download link | straight to Downloads, no prompt |
+| Password | typed on every fetch, sent in every body | once, exchanged for a 12 h token |
+| Playback | extension guess, empty player on MKV | codec probe, plain verdict, VLC handoff |
+| Stream URLs | unauthenticated | token-bearing, expiring |
+| Tests | none | 7, covering the download engine's failure modes |
 | react / vite / typescript | 18 / 5 / 5.6 | 19 / 8 / 7 |

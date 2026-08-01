@@ -14,6 +14,9 @@ jobs:
         with:
           node-version: '24'
       - run: npm install --no-audit --no-fund
+      # public/sw.js is the download engine and lives outside the bundle, so tsc never sees it.
+      # These tests are the only thing standing between a typo there and a broken download.
+      - run: npm test
       # `npm run build` runs tsc --noEmit first, so a type error fails the build rather than
       # shipping a bundle that only breaks at runtime.
       - run: npm run build
