@@ -1,0 +1,101 @@
+# Builds the desktop app for every platform flai claims to support.
+#
+# There is no way around a matrix here: a macOS bundle needs macOS, a Windows installer needs
+# Windows, and Docker only ever gets you the Linux one. These runners are what makes the other
+# two exist at all, and it is also the only place the Windows and Linux binaries are ever
+# built — nobody has run them on the machine they were developed on.
+#
+# Nothing here is signed. Signing certificates cost money per year, so the first launch shows
+# Gatekeeper on macOS and SmartScreen on Windows. The release notes say so plainly rather than
+# leaving people to guess whether the download is safe.
+name: desktop
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            label: macOS (Apple silicon)
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            label: macOS (Intel)
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            label: Linux
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows
+
+    runs-on: ${{ matrix.platform }}
+    name: ${{ matrix.label }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 22.04, not 24.04: Tauri 2 on Linux links against webkit2gtk-4.1, and the package names
+      # moved in 24.04. Pinning the runner is cheaper than carrying both spellings.
+      - name: Linux system dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: flai/desktop/src-tauri -> target
+          key: ${{ matrix.target }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - run: npm ci
+        working-directory: desktop
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          args: --target ${{ matrix.target }}
+          tagName: ${{ github.ref_name }}
+          releaseName: flai desktop ${{ github.ref_name }}
+          releaseBody: |
+            Downloads torrents straight to your disk. No account, no server in the middle,
+            no size limit, and it picks up where it left off if you close it.
+
+            | Platform | File |
+            |---|---|
+            | macOS (Apple silicon) | `_aarch64.dmg` |
+            | macOS (Intel) | `_x64.dmg` |
+            | Windows | `_x64-setup.exe` |
+            | Linux | `.AppImage` or `.deb` |
+
+            **These builds are not code-signed.** A signing certificate is a yearly fee and
+            this is a free tool, so the first launch needs one extra step:
+
+            - **macOS** — right-click the app and choose Open, then Open again. After that it
+              launches normally.
+            - **Windows** — SmartScreen shows "Windows protected your PC". Click More info,
+              then Run anyway.
+
+            Only the Apple silicon build has been run by a human. The rest are built here and
+            never launched — if one of them misbehaves, that is why.
+          releaseDraft: true
+          prerelease: false

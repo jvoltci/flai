@@ -1,0 +1,429 @@
+/* === flai desktop ============================================================
+ * Same design system and same identity as the web app, different job. The web page is one
+ * field held in the middle of a photograph, because it does one thing at a time. This is a
+ * list of downloads that runs for hours, so it is a tool window: dense at the top, quiet
+ * everywhere else, and never moving under the pointer while a number ticks.
+ *
+ * Order matters: tokens -> scale -> base -> components. */
+@import 'nilam/tokens.css';
+@import 'nilam/scale.css';
+@import 'nilam/base.css';
+@import 'nilam/components.css';
+@import 'nilam/motion.css';
+
+/* Everything below lives in nilam's last layer, so a local rule beats nilam.components by
+ * exactly one step instead of bypassing the whole stack the way unlayered CSS would.
+ *
+ * There is not one colour literal below this line. Every value is a nilam token. */
+@layer nilam.utilities {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  .flai-app {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 60rem;
+    /* min-height, not height: the list grows past the window and scrolls, but an empty one
+       still fills it. Without this the app is a strip of controls above a void. */
+    min-height: 100%;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+
+  /* ── identity ──────────────────────────────────────────────────────────── */
+
+  .flai-top {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+
+  /* --text-4xl, not --text-display. The web page gives the wordmark the whole viewport; here
+     it shares the top of a window with a magnet field, and display size would make the app
+     look like a landing page every time you opened it to check on a download. Big enough to be
+     the first thing read, small enough not to be the point. */
+  .flai-wordmark {
+    margin: 0;
+    font-size: var(--text-5);
+    font-weight: var(--weight-thin);
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+  /* --brand-11 is the text step, solved for 4.5:1 against step 3. --brand-9 is the solid, and
+     using the solid as text is the mistake it invites. font-weight: inherit because <b> is
+     UA-bold, and bold at this size is the "shouting" the scale warns about. */
+  .flai-wordmark b {
+    font-weight: inherit;
+    color: var(--brand-11);
+  }
+
+  .flai-sub {
+    color: var(--neutral-11);
+    font-size: var(--text-0);
+  }
+
+  /* ── the one control ───────────────────────────────────────────────────── */
+
+  .flai-command {
+    display: flex;
+    gap: var(--space-2);
+  }
+  .flai-command .n-input {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: var(--text-0);
+  }
+
+  .flai-error {
+    margin: 0;
+  }
+
+  /* ── the file picker, shown only while a magnet is being set up ────────── */
+
+  .flai-panel {
+    border: 1px solid var(--neutral-6);
+    border-radius: var(--r-4);
+    background: var(--neutral-2);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .flai-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  /* Torrent names are long, unspaced and user-supplied. Without break-word one of them
+     stretches the window instead of wrapping. */
+  .flai-panel-title {
+    margin: 0;
+    font-size: var(--text-3);
+    overflow-wrap: break-word;
+  }
+  .flai-panel-sub,
+  .flai-hint {
+    margin: 0;
+    color: var(--neutral-11);
+    font-size: var(--text-0);
+  }
+
+  .flai-folder {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-00);
+    color: var(--neutral-11);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .flai-files {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 18rem;
+    overflow-y: auto;
+    border-top: 1px solid var(--neutral-6);
+  }
+
+  .flai-file {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-1);
+    border-bottom: 1px solid var(--neutral-4);
+    cursor: pointer;
+  }
+  .flai-file:hover {
+    background: var(--neutral-3);
+  }
+  .flai-file-name {
+    overflow-wrap: anywhere;
+    font-size: var(--text-0);
+  }
+  .flai-file-size {
+    color: var(--neutral-11);
+    font-size: var(--text-00);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── the list, which is what the window is actually for ────────────────── */
+
+  .flai-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    /* Takes the rest of the window, so downloads accumulate downwards from the field rather
+       than floating above an unexplained gap. */
+    flex: 1;
+  }
+
+  /* The empty state is the whole window when there is nothing to show, so it is centred in it
+     rather than sitting as a short box at the top. */
+  .flai-empty {
+    margin: 0;
+    flex: 1;
+    display: grid;
+    place-content: center;
+    padding: var(--space-6) var(--space-5);
+    text-align: center;
+    text-wrap: balance;
+    max-width: 34rem;
+    margin-inline: auto;
+    color: var(--neutral-11);
+    font-size: var(--text-0);
+    border: 1px dashed var(--neutral-6);
+    border-radius: var(--r-4);
+  }
+
+  .flai-item {
+    border: 1px solid var(--neutral-6);
+    border-radius: var(--r-4);
+    background: var(--neutral-2);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .flai-item[data-done] {
+    border-color: var(--ok-7);
+  }
+  .flai-item[data-state='error'] {
+    border-color: var(--danger-7);
+  }
+
+  .flai-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+  .flai-item-name {
+    overflow-wrap: anywhere;
+    font-size: var(--text-0);
+  }
+  /* Tabular figures, because the percentage updates several times a second and proportional
+     digits make it jitter sideways while it does. */
+  .flai-item-pct {
+    font-variant-numeric: tabular-nums;
+    color: var(--neutral-11);
+    font-size: var(--text-0);
+    white-space: nowrap;
+  }
+
+  .flai-bar {
+    height: var(--space-1);
+    border-radius: var(--r-full);
+    background: var(--neutral-5);
+    overflow: hidden;
+  }
+  .flai-bar-fill {
+    height: 100%;
+    background: var(--brand-9);
+    /* Matches the poll interval, so the bar glides between samples instead of stepping. */
+    transition: width 800ms linear;
+  }
+  .flai-item[data-done] .flai-bar-fill {
+    background: var(--ok-9);
+  }
+  .flai-item[data-state='error'] .flai-bar-fill {
+    background: var(--danger-9);
+  }
+
+  .flai-item-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    color: var(--neutral-11);
+    font-size: var(--text-00);
+    font-variant-numeric: tabular-nums;
+  }
+  .flai-bad {
+    color: var(--danger-11);
+  }
+  .flai-item-actions {
+    margin-left: auto;
+  }
+}
+
+/* ── verbose view, priority and settings ──────────────────────────────────── */
+@layer nilam.utilities {
+  .flai-gear {
+    margin-left: auto;
+  }
+
+  /* The name is the disclosure control, so the whole row header is one target rather than a
+     separate arrow you have to aim at. Stripped back to text: a button that looks like a
+     button here would compete with the three real actions below it. */
+  .flai-item-name {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+    overflow-wrap: anywhere;
+    font-size: var(--text-0);
+  }
+  .flai-item-name:hover {
+    color: var(--brand-11);
+  }
+  .flai-item-name:focus-visible {
+    outline: var(--ring-width) solid var(--brand-8);
+    outline-offset: var(--ring-offset);
+    border-radius: var(--r-2);
+  }
+  .flai-caret {
+    display: inline-block;
+    color: var(--neutral-11);
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+  .flai-caret[data-open] {
+    transform: rotate(90deg);
+  }
+
+  .flai-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--neutral-5);
+  }
+  .flai-detail-note {
+    margin: 0;
+    font-size: var(--text-00);
+    color: var(--neutral-11);
+  }
+
+  /* Peer counts as a definition list, because each number needs its own word to mean anything:
+     "seen 240, connected 9" says something that "9 peers" does not. */
+  .flai-peers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+    gap: var(--space-2) var(--space-3);
+    margin: 0;
+  }
+  .flai-peers dt {
+    font-size: var(--text-000);
+    color: var(--neutral-11);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .flai-peers dd {
+    margin: 0;
+    font-size: var(--text-0);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .flai-first-note {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    font-size: var(--text-00);
+    color: var(--brand-11);
+  }
+
+  .flai-detail-files {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 22rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .flai-detail-file {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6rem auto auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+  }
+  /* A file the torrent is not fetching is still worth showing — knowing what you skipped is
+     half of why you opened this — but it should not read as active. */
+  .flai-detail-file[data-off] {
+    opacity: 0.45;
+  }
+  .flai-detail-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-00);
+  }
+  .flai-detail-bar {
+    height: 3px;
+    border-radius: var(--r-full);
+    background: var(--neutral-5);
+    overflow: hidden;
+  }
+  .flai-detail-bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--brand-9);
+    transition: width var(--dur-3) linear;
+  }
+  .flai-detail-bar-fill[data-done] {
+    background: var(--ok-9);
+  }
+  .flai-detail-size,
+  .flai-detail-state {
+    font-size: var(--text-000);
+    color: var(--neutral-11);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  /* ── settings ──────────────────────────────────────────────────────────── */
+
+  .flai-setting {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .flai-setting-label {
+    font-size: var(--text-00);
+    color: var(--neutral-11);
+  }
+  .flai-setting-unit {
+    color: var(--neutral-10);
+  }
+  .flai-setting-row {
+    display: flex;
+    gap: var(--space-2);
+  }
+  .flai-setting-path {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: var(--text-00);
+  }
+  .flai-setting-hint {
+    margin: 0;
+    font-size: var(--text-000);
+    color: var(--neutral-11);
+  }
+  .flai-setting-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--space-3);
+  }
+  .flai-saved-flash {
+    font-size: var(--text-00);
+    color: var(--ok-11);
+  }
+}

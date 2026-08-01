@@ -11,6 +11,8 @@ const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAU
 const STARTED_MS = 8000;
 /** Below this a filter box is noise; above it, a file list is a wall. */
 const FILTER_THRESHOLD = 8;
+/** Where the desktop builds land. The workflow that makes them is .github/workflows/desktop.yml. */
+const DESKTOP_RELEASES = 'https://github.com/jvoltci/flai/releases';
 
 /* Every kind carries a glyph as well as a hue. nilam's rule: anything colour-coded needs a
  * second channel, because at hue 285 the status colours collapse under deuteranopia. */
@@ -297,6 +299,20 @@ export function App() {
               !settled && <p className="n-hint flai-centred">Paste to load</p>
             )}
           </form>
+        )}
+
+        {/* The honest footnote. This page runs on a free 512 MB box with no disk, so it serves
+            one file at a time through a sliding window. The desktop app is the same idea with
+            none of that: it has a disk, so it takes every file at once, at whatever speed the
+            swarm gives, and survives being closed. Shown only when idle — once a torrent is
+            open, an advert for a different program is in the way. */}
+        {!settled && (
+          <p className="n-hint flai-centred flai-native">
+            <a href={DESKTOP_RELEASES} target="_blank" rel="noreferrer">
+              Get the desktop app
+            </a>{' '}
+            for whole folders at once, no size limit, and downloads that resume after a restart.
+          </p>
         )}
       </div>
 

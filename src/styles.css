@@ -493,3 +493,19 @@
   }
 
 }
+
+@layer nilam.utilities {
+  /* The desktop link. Quiet on purpose: this page's job is the paste field, and a footnote
+     that competes with it would be an advert. --text-00 and --neutral-11 put it a clear step
+     below the hint above it. */
+  .flai-native {
+    font-size: var(--text-00);
+    color: var(--neutral-11);
+    max-width: 34rem;
+    margin-inline: auto;
+    text-wrap: balance;
+  }
+  .flai-native a {
+    color: var(--brand-11);
+  }
+}
