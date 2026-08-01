@@ -302,6 +302,51 @@
     color: var(--neutral-11);
   }
   .flai-playable { color: var(--brand-11); }
+
+  /* ── the saved list ───────────────────────────────────────────────────────
+   *
+   * Each row is one big button rather than a row with a link in it: the whole thing is one
+   * target, which is both easier to hit and a smaller tab stop count than name-plus-open.
+   * The remove × stays a separate control because it does the opposite thing. */
+  .flai-saved {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: var(--space-1);
+  }
+  .flai-saved-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .flai-saved-open {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: start;
+    padding: var(--space-2);
+    margin-inline-start: calc(var(--space-2) * -1);
+    border: none;
+    background: none;
+    border-radius: var(--r-3);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .flai-saved-open:hover { background: var(--neutral-3); }
+  /* nilam's ring, copied rather than invented, so this matches every other focus on the page. */
+  .flai-saved-open:focus-visible {
+    outline: var(--ring-width) solid var(--brand-8);
+    outline-offset: var(--ring-offset);
+  }
+  .flai-saved-name { overflow-wrap: anywhere; }
+
+  /* The star is the state, not the button. A filled --brand-11 glyph next to a label that also
+     changes is two channels, which is nilam's rule for anything colour-coded — and it keeps a
+     toggle from looking like the loudest control on the page. */
+  .flai-star { color: var(--brand-11); }
   /* Centred, so an empty table reads as "no match" rather than as broken. */
   .flai-empty {
     text-align: center;

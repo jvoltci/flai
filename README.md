@@ -53,6 +53,20 @@ generated as it is sent, so its length is unknown when the headers go out — Ch
 unknown size, and if the transfer breaks it starts over rather than resuming with a `Range`.
 Big multi-file torrents are still better saved one file at a time.
 
+## Saving one for later
+
+A star on a loaded torrent keeps its magnet in `localStorage`, and the saved list appears in the
+idle state — under the field, which is where you are when you are deciding what to download.
+Once a torrent is open the list hides: it is answering a question you have already answered.
+
+`localStorage`, not IndexedDB: a magnet is a short string, and a synchronous read puts the list
+on screen in the first paint rather than a frame later. The cached name and size are a label
+only — reopening always re-fetches, so a torrent whose swarm has died says so when you open it
+instead of quietly disappearing.
+
+Same-tab updates go through a custom event, because the browser's `storage` event only fires in
+*other* tabs — without it the star and the list disagree inside one tab.
+
 ## The page
 
 One card of controls, one table. What is worth knowing about it:

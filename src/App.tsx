@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiClient, type FileEntry, type Metadata } from './api';
 import { Player } from './Player';
 import { formatBytes } from './format';
+import { useWishlist, savedAgo } from './wishlist';
 
 const DEFAULT_API = 'https://flai-api.onrender.com';
 const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAULT_API;
@@ -59,6 +60,7 @@ export function App() {
   const [started, setStarted] = useState<number[]>([]);
   const [zipStarted, setZipStarted] = useState(false);
 
+  const saved = useWishlist();
   const magnetRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -132,6 +134,14 @@ export function App() {
       event.preventDefault();
       setUrl(pasted);
       void load(pasted);
+    },
+    [load]
+  );
+
+  const open = useCallback(
+    (magnet: string) => {
+      setUrl(magnet);
+      void load(magnet);
     },
     [load]
   );
@@ -264,6 +274,47 @@ export function App() {
         )}
       </div>
 
+      {!settled && saved.items.length > 0 && (
+        /* Only in the idle state. This is the "what was I going to download" list, and once a
+           torrent is open it is answering a question you have already answered. */
+        <section className="n-card n-card-pad n-stack flai-tight flai-rise" aria-labelledby="saved-title">
+          <h2 className="flai-title" id="saved-title">
+            Saved
+          </h2>
+          <ul className="n-stack flai-saved">
+            {saved.items.map((item) => (
+              <li key={item.infoHash} className="flai-saved-row">
+                <button
+                  type="button"
+                  className="flai-saved-open"
+                  onClick={() => open(item.magnet)}
+                  title="Load this torrent"
+                >
+                  <span className="flai-saved-name">{item.name}</span>
+                  <span className="flai-meta-line">
+                    <span className="n-num">{formatBytes(item.size)}</span>
+                    <span aria-hidden="true"> · </span>
+                    <span className="n-num">
+                      {item.files} file{item.files === 1 ? '' : 's'}
+                    </span>
+                    <span aria-hidden="true"> · </span>
+                    <span>saved {savedAgo(item.savedAt)}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="n-btn n-btn-sm n-btn-ghost"
+                  onClick={() => saved.remove(item.infoHash)}
+                  aria-label={`Remove ${item.name} from saved`}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {busy && <ListSkeleton />}
 
       {error && (
@@ -308,6 +359,20 @@ export function App() {
               </p>
             </div>
             <div className="n-cluster flai-results-tools">
+              {/* Saving costs one localStorage write and makes the magnet findable again
+                  without going back to wherever you got it. */}
+              <button
+                type="button"
+                className="n-btn n-btn-sm"
+                onClick={() => saved.toggle(meta, url.trim())}
+                aria-pressed={saved.has(meta.infoHash)}
+                title={saved.has(meta.infoHash) ? 'Remove from saved' : 'Save for later'}
+              >
+                <span className={saved.has(meta.infoHash) ? 'flai-star' : undefined} aria-hidden="true">
+                  {saved.has(meta.infoHash) ? '★' : '☆'}
+                </span>
+                {saved.has(meta.infoHash) ? 'Saved' : 'Save for later'}
+              </button>
               {meta.files.length > FILTER_THRESHOLD && (
                 <div className="n-field flai-filter">
                   <label className="n-sr-only" htmlFor="file-filter">
