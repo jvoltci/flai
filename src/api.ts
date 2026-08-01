@@ -88,17 +88,6 @@ export class ApiClient {
     return url.toString();
   }
 
-  /* Every file, as one zip. No Content-Length and no resume — the archive is generated as it
-   * is sent, so its size is not known when the headers go out. That is the trade for one
-   * action instead of thirty, and the UI says so rather than letting it be a surprise. */
-  archiveUrl(infoHash: string, magnet: string): string {
-    const url = new URL(`${this.baseUrl}/torrent/${infoHash}`);
-    if (this.#token) url.searchParams.set('t', this.#token);
-    url.searchParams.set('dl', '1');
-    url.searchParams.set('m', magnet);
-    return url.toString();
-  }
-
   /* The download link carries its own magnet, which is what lets it heal itself. The bridge
    * stores nothing, so after a spin-down or a redeploy it has no way to find this torrent
    * again — but the URL Chrome is retrying has everything needed to re-add it. That is how a

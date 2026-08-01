@@ -58,7 +58,6 @@ export function App() {
   const [player, setPlayer] = useState<FileEntry | null>(null);
   const [filter, setFilter] = useState('');
   const [started, setStarted] = useState<number[]>([]);
-  const [zipStarted, setZipStarted] = useState(false);
 
   const saved = useWishlist();
   const magnetRef = useRef<HTMLInputElement>(null);
@@ -114,7 +113,6 @@ export function App() {
       setPlayer(null);
       setFilter('');
       setStarted([]);
-      setZipStarted(false);
       try {
         setMeta(await api.metadata(magnet));
       } catch (err) {
@@ -387,26 +385,6 @@ export function App() {
                     onChange={(e) => setFilter(e.target.value)}
                   />
                 </div>
-              )}
-              {meta.files.length > 1 && (
-                /* One action instead of thirty. It is the same single reader as any other
-                   download — archiver consumes one file's windowed stream at a time — so it
-                   costs the bridge no more memory than saving one file does. */
-                <a
-                  className="n-btn n-btn-sm"
-                  href={api.archiveUrl(meta.infoHash, url.trim())}
-                  download={`${meta.name}.zip`}
-                  onClick={() => setZipStarted(true)}
-                  title="Every file in one archive"
-                >
-                  {zipStarted ? (
-                    <>
-                      <span aria-hidden="true">✓</span> Started
-                    </>
-                  ) : (
-                    'Save all (.zip)'
-                  )}
-                </a>
               )}
             </div>
           </div>
