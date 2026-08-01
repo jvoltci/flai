@@ -1,13 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ApiClient, type FileEntry, type Metadata } from './api';
-import {
-  onProgress,
-  serviceWorkerSupported,
-  startDownload,
-  type DownloadStatus,
-} from './downloader';
 import { Player } from './Player';
-import { formatBytes, formatPercent } from './format';
+import { formatBytes } from './format';
 
 const DEFAULT_API = 'https://flai-api.onrender.com';
 const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAULT_API;
@@ -41,54 +35,6 @@ const ListSkeleton = () => (
   </section>
 );
 
-const STATE_TEXT: Record<DownloadStatus['state'], string> = {
-  starting: 'starting',
-  running: 'downloading',
-  waking: 'waking the bridge',
-  done: 'saved to Downloads',
-  error: 'stopped',
-  cancelled: 'cancelled',
-};
-
-/* Deliberately not a progress bar. Chrome's own download bar already has one, and duplicating
- * it was most of what made the old three-tab version feel heavy. This is one line per file so
- * you can see the bridge is alive — particularly "waking the bridge", which is the free tier
- * cold-starting and the only pause that ever looks like a hang. */
-const Activity = ({ items }: { items: DownloadStatus[] }) => {
-  if (items.length === 0) return null;
-  return (
-    <section className="n-card n-card-pad n-stack flai-tight" aria-label="Downloads">
-      {items.map((item) => (
-        <div key={item.id} className="n-cluster flai-activity" role="status">
-          <span className="flai-activity-name">{item.name}</span>
-          <span
-            className={
-              item.state === 'done'
-                ? 'n-badge n-badge-ok'
-                : item.state === 'error'
-                  ? 'n-badge n-badge-danger'
-                  : item.state === 'waking'
-                    ? 'n-badge n-badge-warn'
-                    : 'n-badge n-badge-brand'
-            }
-          >
-            <i className="n-badge-glyph" aria-hidden="true">
-              {item.state === 'done' ? '✓' : item.state === 'error' ? '×' : item.state === 'waking' ? '!' : '↓'}
-            </i>
-            {STATE_TEXT[item.state]}
-          </span>
-          {item.state === 'running' && (
-            <span className="n-hint flai-activity-figure">
-              {formatPercent(item.bytes, item.size)} of {formatBytes(item.size)}
-            </span>
-          )}
-          {item.error && <span className="n-hint">{item.error}</span>}
-        </div>
-      ))}
-    </section>
-  );
-};
-
 export function App() {
   const api = useMemo(() => new ApiClient(apiBaseUrl), []);
 
@@ -104,21 +50,6 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [player, setPlayer] = useState<FileEntry | null>(null);
-  const [downloads, setDownloads] = useState<DownloadStatus[]>([]);
-
-  useEffect(
-    () =>
-      onProgress((message) => {
-        setDownloads((current) =>
-          current.map((item) =>
-            item.id === message.id
-              ? { ...item, state: message.state, bytes: message.bytes ?? item.bytes, error: message.error }
-              : item
-          )
-        );
-      }),
-    []
-  );
 
   const signIn = useCallback(
     async (event: React.FormEvent) => {
@@ -165,26 +96,6 @@ export function App() {
     [api, busy, url]
   );
 
-  const download = useCallback(
-    async (file: FileEntry) => {
-      if (!meta) return;
-      setError(null);
-      try {
-        const status = await startDownload({
-          apiBaseUrl,
-          token: api.token ?? '',
-          magnet: url.trim(),
-          meta,
-          file,
-        });
-        setDownloads((current) => [status, ...current.filter((d) => d.name !== status.name)]);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'could not start that download');
-      }
-    },
-    [api, meta, url]
-  );
-
   const playable = meta ? meta.files.filter((f) => f.streamable).length : 0;
 
   return (
@@ -198,8 +109,8 @@ export function App() {
           </h1>
         </div>
         <p className="flai-lede">
-          Paste a magnet. flai asks the swarm for the file list, then streams each file into
-          your Downloads folder in 8&nbsp;MB slices — retrying through restarts on its own.
+          Paste a magnet. flai asks the swarm for the file list, then hands each file to your
+          browser as an ordinary download — resumable, and it never buffers anywhere.
         </p>
 
         {!signedIn ? (
@@ -303,19 +214,6 @@ export function App() {
         )}
       </header>
 
-      {signedIn && !serviceWorkerSupported() && (
-        <div className="n-note n-note-danger" role="alert">
-          <span className="n-note-glyph" aria-hidden="true">
-            ×
-          </span>
-          <div>
-            <span className="n-note-title">No service worker support.</span> flai streams
-            downloads through one, so downloading will not work in this browser. Playback still
-            does.
-          </div>
-        </div>
-      )}
-
       {busy && <ListSkeleton />}
 
       {error && (
@@ -328,8 +226,6 @@ export function App() {
           </div>
         </div>
       )}
-
-      <Activity items={downloads} />
 
       {player && meta && (
         <Player api={api} meta={meta} file={player} onClose={() => setPlayer(null)} />
@@ -401,13 +297,16 @@ export function App() {
                               {playing ? 'Playing' : 'Play'}
                             </button>
                           )}
-                          <button
-                            type="button"
+                          {/* A plain link. The browser's own download manager takes it from
+                              here — progress, pause, and resuming an interrupted transfer with
+                              a Range request, none of which needs a line of our code. */}
+                          <a
                             className="n-btn n-btn-sm"
-                            onClick={() => void download(file)}
+                            href={api.downloadUrl(meta.infoHash, file.index, url.trim())}
+                            download={file.name}
                           >
                             Save
-                          </button>
+                          </a>
                         </div>
                       </td>
                     </tr>

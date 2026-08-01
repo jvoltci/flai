@@ -85,12 +85,22 @@ export class ApiClient {
     });
   }
 
-  /* Token in the query string, because a <video src> and an EventSource cannot set headers.
-   * That is why tokens expire: a URL leaks in a way a header does not. */
-  streamUrl(infoHash: string, fileIndex: number, attachment = false): string {
+  /* Token in the query string, because a <video src>, an <a download> and an EventSource all
+   * cannot set headers. That is why tokens expire: a URL leaks in a way a header does not. */
+  streamUrl(infoHash: string, fileIndex: number): string {
     const url = new URL(`${this.baseUrl}/torrent/${infoHash}/${fileIndex}`);
     if (this.#token) url.searchParams.set('t', this.#token);
-    if (attachment) url.searchParams.set('dl', '1');
+    return url.toString();
+  }
+
+  /* The download link carries its own magnet, which is what lets it heal itself. The bridge
+   * stores nothing, so after a spin-down or a redeploy it has no way to find this torrent
+   * again — but the URL Chrome is retrying has everything needed to re-add it. That is how a
+   * native download survives a server restart with no JavaScript involved at all. */
+  downloadUrl(infoHash: string, fileIndex: number, magnet: string): string {
+    const url = new URL(this.streamUrl(infoHash, fileIndex));
+    url.searchParams.set('dl', '1');
+    url.searchParams.set('m', magnet);
     return url.toString();
   }
 
