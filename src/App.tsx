@@ -1,10 +1,15 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiClient, type FileEntry, type Metadata } from './api';
 import { Player } from './Player';
 import { formatBytes } from './format';
 
 const DEFAULT_API = 'https://flai-api.onrender.com';
 const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAULT_API;
+
+/** How long a Save button stays acknowledged. Long enough to notice, short enough to re-click. */
+const STARTED_MS = 8000;
+/** Below this a filter box is noise; above it, a file list is a wall. */
+const FILTER_THRESHOLD = 8;
 
 /* Every kind carries a glyph as well as a hue. nilam's rule: anything colour-coded needs a
  * second channel, because at hue 285 the status colours collapse under deuteranopia. */
@@ -50,6 +55,26 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   const [player, setPlayer] = useState<FileEntry | null>(null);
+  const [filter, setFilter] = useState('');
+  const [started, setStarted] = useState<number[]>([]);
+
+  const magnetRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  // The one field on the page should not need a click to reach.
+  useEffect(() => {
+    (signedIn ? magnetRef : passwordRef).current?.focus();
+  }, [signedIn]);
+
+  // Escape closes the player, the way every other overlay on the web does.
+  useEffect(() => {
+    if (!player) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPlayer(null);
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [player]);
 
   const signIn = useCallback(
     async (event: React.FormEvent) => {
@@ -70,12 +95,11 @@ export function App() {
     [api, password, signingIn]
   );
 
-  const fetchFiles = useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
-      // aria-busy stops a second click but not a second Enter inside the field.
+  /* Takes the magnet as an argument rather than reading state, so the paste handler can fetch
+   * the pasted value immediately instead of waiting a render for setUrl to land. */
+  const load = useCallback(
+    async (magnet: string) => {
       if (busy) return;
-      const magnet = url.trim();
       if (!magnet.toLowerCase().startsWith('magnet:')) {
         setUrlInvalid(true);
         return;
@@ -85,6 +109,8 @@ export function App() {
       setError(null);
       setMeta(null);
       setPlayer(null);
+      setFilter('');
+      setStarted([]);
       try {
         setMeta(await api.metadata(magnet));
       } catch (err) {
@@ -93,25 +119,73 @@ export function App() {
         setBusy(false);
       }
     },
-    [api, busy, url]
+    [api, busy]
   );
 
+  /* The entire interaction is "paste a magnet", so pasting one should be the whole interaction.
+   * Requiring a click afterwards was the only friction left in the happy path. */
+  const onPaste = useCallback(
+    (event: React.ClipboardEvent<HTMLInputElement>) => {
+      const pasted = event.clipboardData.getData('text').trim();
+      if (!pasted.toLowerCase().startsWith('magnet:')) return;
+      event.preventDefault();
+      setUrl(pasted);
+      void load(pasted);
+    },
+    [load]
+  );
+
+  const onSave = useCallback((file: FileEntry) => {
+    /* An <a download> gives the page no signal at all, and Chrome's download bar may well be
+     * collapsed — so clicking Save looked like nothing happening. This is the acknowledgement. */
+    setStarted((current) => [...new Set([...current, file.index])]);
+    setTimeout(() => {
+      setStarted((current) => current.filter((i) => i !== file.index));
+    }, STARTED_MS);
+  }, []);
+
+  const signOut = useCallback(() => {
+    api.signOut();
+    setSignedIn(false);
+    setMeta(null);
+    setPlayer(null);
+    setUrl('');
+  }, [api]);
+
   const playable = meta ? meta.files.filter((f) => f.streamable).length : 0;
+  const needle = filter.trim().toLowerCase();
+  const visible = meta
+    ? needle
+      ? meta.files.filter((f) => f.name.toLowerCase().includes(needle))
+      : meta.files
+    : [];
 
   return (
     <main id="home" className="n-container flai-shell n-stack">
       <header className="n-card n-card-pad n-stack flai-hero">
         <div className="n-stack flai-tight">
-          <p className="flai-eyebrow">magnet · stream · straight to downloads</p>
+          <div className="n-cluster flai-hero-head">
+            <p className="flai-eyebrow">magnet · stream · straight to downloads</p>
+            {signedIn && (
+              <button type="button" className="n-btn n-btn-sm n-btn-ghost" onClick={signOut}>
+                Sign out
+              </button>
+            )}
+          </div>
           {/* The page's one --text-display element. */}
           <h1 className="flai-word">
             fl<b>ai</b>
           </h1>
         </div>
-        <p className="flai-lede">
-          Paste a magnet. flai asks the swarm for the file list, then hands each file to your
-          browser as an ordinary download — resumable, and it never buffers anywhere.
-        </p>
+
+        {/* The lede explains the app to someone who has not used it. Once a torrent is open it
+            is explaining something they are already doing, so it gets out of the way. */}
+        {!meta && (
+          <p className="flai-lede">
+            Paste a magnet and flai asks the swarm for the file list. Saving hands the file to
+            your browser as an ordinary download — resumable, buffered nowhere.
+          </p>
+        )}
 
         {!signedIn ? (
           <form onSubmit={signIn} className="n-stack">
@@ -120,6 +194,7 @@ export function App() {
                 Password
               </label>
               <input
+                ref={passwordRef}
                 id="password"
                 className="n-input"
                 type="password"
@@ -162,12 +237,19 @@ export function App() {
             </div>
           </form>
         ) : (
-          <form onSubmit={fetchFiles} className="n-stack">
+          <form
+            className="n-stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void load(url.trim());
+            }}
+          >
             <div className="n-field">
               <label className="n-label" data-required htmlFor="magnet">
                 Magnet URI
               </label>
               <input
+                ref={magnetRef}
                 id="magnet"
                 className="n-input"
                 type="text"
@@ -176,6 +258,7 @@ export function App() {
                 spellCheck={false}
                 placeholder="magnet:?xt=urn:btih:…"
                 value={url}
+                onPaste={onPaste}
                 onChange={(e) => {
                   setUrl(e.target.value);
                   if (urlInvalid) setUrlInvalid(false);
@@ -192,7 +275,7 @@ export function App() {
                 </p>
               ) : (
                 <p className="n-hint" id="magnet-hint">
-                  Info-hash magnets only. flai never sees the file until a peer sends it.
+                  Paste one and it loads straight away. Info-hash magnets only.
                 </p>
               )}
             </div>
@@ -202,8 +285,6 @@ export function App() {
                 Fetch files
               </button>
               {busy && (
-                /* role="status" carries an implicit aria-live="polite", so this is announced
-                   once. The spinner beside it is the decorative half of the pair. */
                 <span className="n-loading" role="status">
                   <span className="n-spinner n-spinner-sm" />
                   Asking the swarm for metadata…
@@ -238,12 +319,12 @@ export function App() {
               {meta.name}
             </h2>
             <div className="n-cluster">
-              <span className="n-badge">{formatBytes(meta.size)}</span>
-              <span className="n-badge">
+              <span className="n-badge n-num">{formatBytes(meta.size)}</span>
+              <span className="n-badge n-num">
                 {meta.files.length} file{meta.files.length === 1 ? '' : 's'}
               </span>
               {playable > 0 && (
-                <span className="n-badge n-badge-brand">
+                <span className="n-badge n-badge-brand n-num">
                   <i className="n-badge-glyph" aria-hidden="true">
                     ▶
                   </i>
@@ -252,6 +333,22 @@ export function App() {
               )}
             </div>
           </div>
+
+          {meta.files.length > FILTER_THRESHOLD && (
+            <div className="n-field">
+              <label className="n-sr-only" htmlFor="file-filter">
+                Filter files by name
+              </label>
+              <input
+                id="file-filter"
+                className="n-input"
+                type="search"
+                placeholder={`Filter ${meta.files.length} files…`}
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+            </div>
+          )}
 
           {/* tabindex per nilam's .n-table-scroll note: a region that scrolls with the mouse
               and not with the keyboard fails 2.1.1. */}
@@ -268,9 +365,10 @@ export function App() {
                 </tr>
               </thead>
               <tbody>
-                {meta.files.map((file) => {
+                {visible.map((file) => {
                   const kind = kindOf(file);
                   const playing = player?.index === file.index;
+                  const justStarted = started.includes(file.index);
                   return (
                     <tr key={file.index} data-playing={playing ? '' : undefined}>
                       <td className="n-table-key flai-name">{file.name}</td>
@@ -297,24 +395,55 @@ export function App() {
                               {playing ? 'Playing' : 'Play'}
                             </button>
                           )}
-                          {/* A plain link. The browser's own download manager takes it from
-                              here — progress, pause, and resuming an interrupted transfer with
-                              a Range request, none of which needs a line of our code. */}
                           <a
-                            className="n-btn n-btn-sm"
+                            className={justStarted ? 'n-btn n-btn-sm n-btn-ok' : 'n-btn n-btn-sm'}
                             href={api.downloadUrl(meta.infoHash, file.index, url.trim())}
                             download={file.name}
+                            onClick={() => onSave(file)}
                           >
-                            Save
+                            {justStarted ? (
+                              <>
+                                <span aria-hidden="true">✓</span> Started
+                              </>
+                            ) : (
+                              'Save'
+                            )}
                           </a>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
+                {visible.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="flai-empty">
+                      No file matches “{filter}”.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+
+          {started.length > 0 ? (
+            /* The one rule a user cannot guess and will otherwise meet as a mysteriously failed
+               download in Chrome: the bridge keeps a single sliding window per torrent, so a
+               second file started now is refused rather than queued. */
+            <div className="n-note n-note-info" role="status">
+              <span className="n-note-glyph" aria-hidden="true">
+                i
+              </span>
+              <div>
+                <span className="n-note-title">Sent to your browser.</span> It appears in your
+                downloads. One file at a time — starting another now would be refused.
+              </div>
+            </div>
+          ) : (
+            <p className="n-hint">
+              Saving uses your browser&rsquo;s own download manager, so it survives a restart of
+              the bridge on its own. One file at a time.
+            </p>
+          )}
         </section>
       )}
     </main>

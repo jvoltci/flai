@@ -5,9 +5,13 @@
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
 @import 'nilam/components.css';
-/* v4 adds tabs and progress bars, both of which nilam animates — the underline slide and the
-   .n-progress value transition. motion.css carries the prefers-reduced-motion handling for
-   those, so importing it is not decoration. */
+/* Not decoration. nilam.base carries the usual blanket
+   `@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important } }`,
+   which is right for ornament and wrong for a loader: frozen, a spinner does not read as
+   "motion reduced", it reads as "this has hung". motion.css re-exempts the loaders — and has
+   to be imported to sit in the first layer, because !important declarations resolve in the
+   REVERSE of layer order, so a later layer cannot win it back. flai leans on the spinner and
+   the skeleton for the one slow moment it has, the cold start. */
 @import 'nilam/motion.css';
 
 /* Everything flai adds goes in @layer nilam.utilities, which is the last layer nilam
@@ -276,25 +280,21 @@
   }
   .flai-player-meta { gap: var(--space-2); }
 
-  /* ── the activity line ────────────────────────────────────────────────────
-   *
-   * One row per download, and no progress bar. Chrome's own download bar already draws one,
-   * and a second bar next to it was most of what made the three-tab version feel heavy.
-   *
-   * What this row is actually for is the state the browser cannot know: "waking the bridge"
-   * — the free tier cold-starting mid-download while the service worker retries. To Chrome
-   * that is just a stream that has gone quiet for a minute. */
-  .flai-activity {
+  /* Sign out sits opposite the eyebrow rather than beside the primary action, which is where
+     it kept catching the eye on the way to "Fetch files". `baseline` so the small ghost button
+     sits on the same line as the mono eyebrow instead of being centred against it. */
+  .flai-hero-head {
     justify-content: space-between;
-    gap: var(--space-3);
+    align-items: baseline;
+    gap: var(--space-4);
   }
-  /* File names are long, unspaced and user-supplied; without this one name sets the width of
-     the card and pushes the badge off the edge. */
-  .flai-activity-name {
-    overflow-wrap: anywhere;
-    min-inline-size: 0;
-    flex: 1 1 12rem;
+
+  /* The "no match" row. --neutral-11 is the quiet step, and centring it stops an empty table
+     reading as a broken one. */
+  .flai-empty {
+    text-align: center;
+    color: var(--neutral-11);
+    padding-block: var(--space-6);
   }
-  /* Tabular figures so the row does not jitter as 9% becomes 10%. */
-  .flai-activity-figure { font-variant-numeric: tabular-nums; }
+
 }

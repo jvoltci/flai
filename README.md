@@ -36,6 +36,25 @@ Together those mean **a download survives a server restart with no client-side c
 The honest limit: if you cancel it in Chrome, it's cancelled. There is no queue here to resume
 it from.
 
+## The page
+
+One card of controls, one table. What is worth knowing about it:
+
+- **Pasting a magnet loads it.** The whole interaction is "paste a magnet", so the click
+  afterwards was the only friction left in the happy path. The paste handler takes the pasted
+  string directly rather than reading state, because `setUrl` has not landed yet on that tick.
+- **Save acknowledges itself.** An `<a download>` gives the page no signal at all and Chrome's
+  download bar is often collapsed, so clicking Save used to look like nothing happening. The
+  button turns into a green "✓ Started" for eight seconds.
+- **One file at a time is stated, not discovered.** The bridge keeps a single sliding window
+  per torrent, so a second file started now is refused. Left unsaid, that arrives as a
+  mysteriously failed download in Chrome.
+- **A filter appears above eight files.** Below that it is noise; above it, a 300-file torrent
+  is a wall.
+- **The lede disappears once a torrent is open.** It explains the app to someone who has not
+  used it; after that it is explaining what they are already doing.
+- The right field is focused on load, and Escape closes the player.
+
 ## Playback
 
 `streamable` means "audio or video", not "your browser can play this". v3 handed `.mkv` to a
