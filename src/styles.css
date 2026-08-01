@@ -102,15 +102,147 @@
   /* Replaces Bootstrap's `py-3`. nilam has no spacing utilities on purpose. */
   .footer-copyright { padding-block: var(--space-4); }
 
-  /* ── the shell ────────────────────────────────────────────────────────────
+  /* ── depth ────────────────────────────────────────────────────────────────
    *
-   * .n-container is 72rem, which is right for a dashboard and much too wide for one form
-   * and one file table — the fields would run to 1150px and become unscannable. 46rem caps
-   * them at a length the eye can track, and lets the photograph frame the content instead
-   * of being wallpaper behind a full-bleed page. */
-  .flai-shell { max-inline-size: 46rem; }
-  #home { padding-block: var(--space-7) var(--space-8); }
+   * A brand-tinted wash falling from the top edge, over the photograph and under everything
+   * else. It is the one piece of pure atmosphere on the page and it earns its place by giving
+   * the wordmark something to sit in front of — without it the display type floats on a flat
+   * scrim and reads as unplaced.
+   *
+   * color-mix rather than an alpha literal, so the hue tracks --brand-9 if the palette is
+   * ever re-solved. Fixed, so it stays with the viewport the way the photograph does. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      /* The wash. */
+      radial-gradient(
+        90% 55% at 50% -10%,
+        color-mix(in oklab, var(--brand-9) 22%, transparent),
+        transparent 70%
+      ),
+      /* And under it, the reason this is two layers rather than one.
+       *
+       * The hero is the first text in this project to sit on the photograph instead of on a
+       * card, so the rule the measurements above were written to protect — "every piece of
+       * text sits on an .n-card, never on the photo" — no longer holds on its own. The two
+       * --scrim layers bring the brightest patch to OKLab L 0.262, but nilam's steps are
+       * solved against the page colour, --neutral-1 at L 0.175. A lighter background than the
+       * token assumed means --neutral-11, the quiet step used by .n-hint, lands under the
+       * 4.5:1 it was solved for. The brand wash above only lightens it further.
+       *
+       * So the top of the page is pulled back to the page colour and the photograph is let
+       * back in below the fold, where nothing but the footer sits on it. Reasoned from the
+       * measurements above rather than re-measured on screen — worth a sampling pass if the
+       * photograph is ever changed. */
+      linear-gradient(
+        to bottom,
+        var(--neutral-1),
+        color-mix(in oklab, var(--neutral-1) 65%, transparent) 55%,
+        transparent 92%
+      );
+  }
+  /* The wash is a fixed element in body's stacking context, so the content has to be lifted
+     above it explicitly or it paints over the page. */
+  #root, footer.footer { position: relative; }
+
+  /* ── the shell, in two states ─────────────────────────────────────────────
+   *
+   * With nothing loaded the page is one wordmark and one field, held in the middle of the
+   * screen. The moment a torrent lands it lifts to the top and the results take the space.
+   * That is the whole layout: the page has somewhere to be before you have given it anything
+   * to do, instead of a form stranded under a masthead.
+   *
+   * .n-container is 72rem, right for a dashboard and too wide for this. 48rem keeps the file
+   * names at a length the eye can track back from. */
+  .flai-shell {
+    max-inline-size: 48rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  #home { padding-block: var(--space-6) var(--space-8); }
+  #home[data-state='idle'] {
+    justify-content: center;
+    min-block-size: min(78dvh, 40rem);
+  }
   .flai-noscript { padding-block: var(--space-7); }
+
+  /* ── entrance ─────────────────────────────────────────────────────────────
+   *
+   * One short rise, on the wordmark and on each panel as it appears. No stagger and no second
+   * effect: the point is that things arrive rather than blink into place.
+   *
+   * nilam.base's blanket `* { animation-duration: 0.01ms !important }` under
+   * prefers-reduced-motion collapses this to its end state, which is exactly right — `both`
+   * means the element lands opaque and in position. Nothing to opt out of by hand. */
+  @keyframes flai-rise {
+    from { opacity: 0; translate: 0 var(--space-3); }
+    to { opacity: 1; translate: 0 0; }
+  }
+  .flai-rise { animation: flai-rise var(--dur-3) var(--ease-out) both; }
+
+  /* The Save acknowledgement, on --ease-spring so the check lands with a little weight. */
+  @keyframes flai-pop {
+    from { scale: 0.92; }
+    to { scale: 1; }
+  }
+  .flai-pop { animation: flai-pop var(--dur-2) var(--ease-spring) both; }
+
+  /* ── the hero ─────────────────────────────────────────────────────────────*/
+  .flai-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-5);
+    text-align: center;
+  }
+  .flai-ask {
+    inline-size: 100%;
+    max-inline-size: 34rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  /* .n-error and .n-loading are flex rows, so text-align does nothing to them. */
+  .flai-centred { justify-content: center; text-align: center; }
+
+  /* ── the command field ────────────────────────────────────────────────────
+   *
+   * The one control on the page, so it is the largest thing after the wordmark and the button
+   * lives inside it rather than beside it. Two elements in a row read as two decisions; one
+   * field with an action on its end reads as one.
+   *
+   * The end padding clears the button. It is a fixed rem value rather than anything clever
+   * because the button's label is a known word, and a wrong guess here is visible instantly:
+   * the caret runs under the button. */
+  .flai-command { position: relative; }
+  .flai-command-input {
+    inline-size: 100%;
+    padding-block: var(--space-3);
+    padding-inline-end: 6.5rem;
+    font-size: var(--text-1);
+    border-radius: var(--r-4);
+  }
+  .flai-command-go {
+    position: absolute;
+    inset-inline-end: var(--space-1);
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    border-radius: var(--r-3);
+  }
+  /* Under about 26rem the button eats the field. Stack them and give the button the width. */
+  @media (max-width: 26rem) {
+    .flai-command-input { padding-inline-end: var(--space-3); }
+    .flai-command-go {
+      position: static;
+      translate: none;
+      inline-size: 100%;
+      margin-block-start: var(--space-2);
+    }
+  }
 
   /* ── the one display moment ───────────────────────────────────────────────
    *
@@ -134,30 +266,45 @@
      forbids — the tag is here for the stylistic offset, not for weight. */
   .flai-word b { font-weight: inherit; color: var(--brand-11); }
 
-  .flai-eyebrow {
-    font: var(--weight-medium) var(--text-000) / 1 var(--font-mono);
-    letter-spacing: var(--tracking-micro);
-    text-transform: uppercase;
-    color: var(--neutral-11);
-  }
-  /* 42ch rather than --measure (65ch): this sits in a 46rem card next to a 120px word, and
-     65ch would run the full width and fight it. */
-  .flai-lede {
-    font-size: var(--text-2);
-    color: var(--neutral-11);
-    max-inline-size: 42ch;
-  }
 
   /* .n-stack is a 16px gap, which is right between a form field and the next field and too
      much between a label-ish line and the thing it labels. */
   .flai-tight { gap: var(--space-2); }
-  .flai-hero { gap: var(--space-5); }
 
   /* Torrent and file names are long, unspaced and user-supplied. Without break-word one
      name sets the width of the whole card. */
   .flai-title {
     font-size: var(--text-3);
     overflow-wrap: anywhere;
+  }
+
+  /* ── results ──────────────────────────────────────────────────────────────*/
+  .flai-tighter { gap: var(--space-1); }
+  .flai-results-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .flai-filter { flex: 0 1 12rem; }
+  /* Size, count and playable as one quiet line rather than three badges. Badges shout, and
+     these are reference figures you glance at, not statuses you act on. */
+  .flai-meta-line {
+    font-size: var(--text-00);
+    color: var(--neutral-11);
+  }
+  .flai-playable { color: var(--brand-11); }
+  /* Centred, so an empty table reads as "no match" rather than as broken. */
+  .flai-empty {
+    text-align: center;
+    color: var(--neutral-11);
+    padding-block: var(--space-6);
+  }
+  /* The filter sits beside a heading, where a full-height field would set the row height. */
+  .n-input-sm {
+    padding-block: var(--space-1);
+    font-size: var(--text-00);
   }
 
   /* ── fields ───────────────────────────────────────────────────────────────
@@ -283,11 +430,6 @@
   /* Sign out sits opposite the eyebrow rather than beside the primary action, which is where
      it kept catching the eye on the way to "Fetch files". `baseline` so the small ghost button
      sits on the same line as the mono eyebrow instead of being centred against it. */
-  .flai-hero-head {
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--space-4);
-  }
 
   /* The "no match" row. --neutral-11 is the quiet step, and centring it stops an empty table
      reading as a broken one. */

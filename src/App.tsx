@@ -19,14 +19,14 @@ function kindOf(file: FileEntry): { label: string; glyph: string | null; brand: 
   return { label: 'File', glyph: null, brand: false };
 }
 
-/* Fetching metadata means finding peers, so there is no proportion to report and .n-progress
- * would be a lie — but the shape that arrives is always a title and a table of rows, and
- * nilam's loader table says prefer the skeleton wherever the shape is predictable.
+/* Metadata means finding peers, so there is no proportion to report and .n-progress would be a
+ * lie — but the shape that arrives is always a title and a table of rows, and nilam's loader
+ * table says prefer the skeleton wherever the shape is predictable.
  *
- * aria-hidden throughout: the .n-loading beside the button is the live region, and two
+ * aria-hidden throughout: the .n-loading next to the field is the live region, and two
  * announcements for one wait means the screen reader says it twice. */
 const ListSkeleton = () => (
-  <section className="n-card n-card-pad n-stack flai-loading-card" aria-hidden="true">
+  <section className="n-card n-card-pad n-stack flai-loading-card flai-rise" aria-hidden="true">
     <div className="n-bar" />
     <div className="n-skeleton flai-skeleton-title" />
     <div className="n-stack flai-skeleton-list">
@@ -95,7 +95,7 @@ export function App() {
     [api, password, signingIn]
   );
 
-  /* Takes the magnet as an argument rather than reading state, so the paste handler can fetch
+  /* Takes the magnet as an argument rather than reading state, so the paste handler can load
    * the pasted value immediately instead of waiting a render for setUrl to land. */
   const load = useCallback(
     async (magnet: string) => {
@@ -122,8 +122,7 @@ export function App() {
     [api, busy]
   );
 
-  /* The entire interaction is "paste a magnet", so pasting one should be the whole interaction.
-   * Requiring a click afterwards was the only friction left in the happy path. */
+  /* The entire interaction is "paste a magnet", so pasting one is the whole interaction. */
   const onPaste = useCallback(
     (event: React.ClipboardEvent<HTMLInputElement>) => {
       const pasted = event.clipboardData.getData('text').trim();
@@ -144,14 +143,6 @@ export function App() {
     }, STARTED_MS);
   }, []);
 
-  const signOut = useCallback(() => {
-    api.signOut();
-    setSignedIn(false);
-    setMeta(null);
-    setPlayer(null);
-    setUrl('');
-  }, [api]);
-
   const playable = meta ? meta.files.filter((f) => f.streamable).length : 0;
   const needle = filter.trim().toLowerCase();
   const visible = meta
@@ -160,98 +151,80 @@ export function App() {
       : meta.files
     : [];
 
-  return (
-    <main id="home" className="n-container flai-shell n-stack">
-      <header className="n-card n-card-pad n-stack flai-hero">
-        <div className="n-stack flai-tight">
-          <div className="n-cluster flai-hero-head">
-            <p className="flai-eyebrow">magnet · stream · straight to downloads</p>
-            {signedIn && (
-              <button type="button" className="n-btn n-btn-sm n-btn-ghost" onClick={signOut}>
-                Sign out
-              </button>
-            )}
-          </div>
-          {/* The page's one --text-display element. */}
-          <h1 className="flai-word">
-            fl<b>ai</b>
-          </h1>
-        </div>
+  /* Two states, and the difference is the point. With nothing loaded the page is one wordmark
+   * and one field, held in the middle of the screen. The moment a torrent lands it lifts to the
+   * top and the results take the space. */
+  const settled = Boolean(meta || busy || error);
 
-        {/* The lede explains the app to someone who has not used it. Once a torrent is open it
-            is explaining something they are already doing, so it gets out of the way. */}
-        {!meta && (
-          <p className="flai-lede">
-            Paste a magnet and flai asks the swarm for the file list. Saving hands the file to
-            your browser as an ordinary download — resumable, buffered nowhere.
-          </p>
-        )}
+  return (
+    <main id="home" className="n-container flai-shell" data-state={settled ? 'results' : 'idle'}>
+      <div className="flai-hero flai-rise">
+        {/* The page's one --text-display element. */}
+        <h1 className="flai-word">
+          fl<b>ai</b>
+        </h1>
 
         {!signedIn ? (
-          <form onSubmit={signIn} className="n-stack">
-            <div className="n-field">
-              <label className="n-label" data-required htmlFor="password">
+          <form onSubmit={signIn} className="flai-ask">
+            <div className="flai-command">
+              <label className="n-sr-only" htmlFor="password">
                 Password
               </label>
               <input
                 ref={passwordRef}
                 id="password"
-                className="n-input"
+                className="n-input flai-command-input"
                 type="password"
                 required
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (signInError) setSignInError(null);
                 }}
                 aria-invalid={signInError ? true : undefined}
-                aria-describedby={signInError ? 'password-error' : 'password-hint'}
+                aria-describedby={signInError ? 'password-error' : undefined}
               />
-              {signInError ? (
-                <p className="n-error" id="password-error">
-                  {signInError}
-                </p>
-              ) : (
-                <p className="n-hint" id="password-hint">
-                  Entered once. The bridge is gated so the bandwidth bill stays with whoever
-                  runs it.
-                </p>
-              )}
-            </div>
-            <div className="n-cluster">
-              <button type="submit" className="n-btn n-btn-fill n-btn-lg" aria-busy={signingIn}>
-                Sign in
+              <button
+                type="submit"
+                className="n-btn n-btn-fill flai-command-go"
+                aria-busy={signingIn}
+              >
+                Enter
               </button>
-              {signingIn && (
-                /* The free tier sleeps after 15 idle minutes and takes about a minute to wake,
-                   and there is no keep-warm ping — it cost 730 of the 750 free hours a month.
-                   So the first sign-in of the day is genuinely slow, and a spinner with no
-                   explanation reads as a hang. */
-                <span className="n-loading" role="status">
-                  <span className="n-spinner n-spinner-sm" />
-                  Waking the bridge — the first sign-in of the day takes about a minute…
-                </span>
-              )}
             </div>
+            {signInError && (
+              <p className="n-error flai-centred" id="password-error">
+                {signInError}
+              </p>
+            )}
+            {signingIn && (
+              /* The free tier sleeps after 15 idle minutes and takes about a minute to wake,
+                 and there is no keep-warm ping — it cost 730 of the 750 free hours a month.
+                 A spinner with no explanation reads as a hang. */
+              <p className="n-loading flai-centred" role="status">
+                <span className="n-spinner n-spinner-sm" />
+                Waking the bridge — this takes about a minute
+              </p>
+            )}
           </form>
         ) : (
           <form
-            className="n-stack"
+            className="flai-ask"
             onSubmit={(e) => {
               e.preventDefault();
               void load(url.trim());
             }}
           >
-            <div className="n-field">
-              <label className="n-label" data-required htmlFor="magnet">
+            <div className="flai-command">
+              <label className="n-sr-only" htmlFor="magnet">
                 Magnet URI
               </label>
               <input
                 ref={magnetRef}
                 id="magnet"
-                className="n-input"
+                className="n-input flai-command-input"
                 type="text"
                 required
                 autoComplete="off"
@@ -264,46 +237,40 @@ export function App() {
                   if (urlInvalid) setUrlInvalid(false);
                 }}
                 aria-invalid={urlInvalid || undefined}
-                aria-describedby={urlInvalid ? 'magnet-error' : 'magnet-hint'}
+                aria-describedby={urlInvalid ? 'magnet-error' : undefined}
               />
-              {urlInvalid ? (
-                /* One text node, no inline markup: .n-error is display:flex, so every child —
-                   including each run of text — becomes a flex item with a var(--space-1) gap.
-                   A <code> mid-sentence came out with a 4px hole either side. */
-                <p className="n-error" id="magnet-error">
-                  That is not a magnet URI — it has to start with magnet:?xt=urn:btih:
-                </p>
-              ) : (
-                <p className="n-hint" id="magnet-hint">
-                  Paste one and it loads straight away. Info-hash magnets only.
-                </p>
-              )}
+              <button type="submit" className="n-btn n-btn-fill flai-command-go" aria-busy={busy}>
+                Fetch
+              </button>
             </div>
 
-            <div className="n-cluster">
-              <button type="submit" className="n-btn n-btn-fill n-btn-lg" aria-busy={busy}>
-                Fetch files
-              </button>
-              {busy && (
-                <span className="n-loading" role="status">
-                  <span className="n-spinner n-spinner-sm" />
-                  Asking the swarm for metadata…
-                </span>
-              )}
-            </div>
+            {urlInvalid ? (
+              /* One text node, no inline markup: .n-error is display:flex, so every run of text
+                 becomes a flex item with a var(--space-1) gap. */
+              <p className="n-error flai-centred" id="magnet-error">
+                That is not a magnet link
+              </p>
+            ) : busy ? (
+              <p className="n-loading flai-centred" role="status">
+                <span className="n-spinner n-spinner-sm" />
+                Asking the swarm
+              </p>
+            ) : (
+              !settled && <p className="n-hint flai-centred">Paste to load</p>
+            )}
           </form>
         )}
-      </header>
+      </div>
 
       {busy && <ListSkeleton />}
 
       {error && (
-        <div className="n-note n-note-danger" role="alert">
+        <div className="n-note n-note-danger flai-rise" role="alert">
           <span className="n-note-glyph" aria-hidden="true">
             ×
           </span>
           <div>
-            <span className="n-note-title">Something went wrong.</span> {error}
+            <span className="n-note-title">Could not load that.</span> {error}
           </div>
         </div>
       )}
@@ -313,45 +280,50 @@ export function App() {
       )}
 
       {meta && (
-        <section className="n-card n-card-pad n-stack" aria-labelledby="torrent-name">
-          <div className="n-stack flai-tight">
-            <h2 className="flai-title" id="torrent-name">
-              {meta.name}
-            </h2>
-            <div className="n-cluster">
-              <span className="n-badge n-num">{formatBytes(meta.size)}</span>
-              <span className="n-badge n-num">
-                {meta.files.length} file{meta.files.length === 1 ? '' : 's'}
-              </span>
-              {playable > 0 && (
-                <span className="n-badge n-badge-brand n-num">
-                  <i className="n-badge-glyph" aria-hidden="true">
-                    ▶
-                  </i>
-                  {playable} playable
+        <section
+          className="n-card n-card-pad n-stack flai-tight flai-rise"
+          aria-labelledby="torrent-name"
+        >
+          <div className="flai-results-head">
+            <div className="n-stack flai-tighter">
+              <h2 className="flai-title" id="torrent-name">
+                {meta.name}
+              </h2>
+              {/* One quiet line instead of three badges. Badges shout, and these are reference
+                  figures you glance at, not statuses you act on. */}
+              <p className="flai-meta-line">
+                <span className="n-num">{formatBytes(meta.size)}</span>
+                <span aria-hidden="true"> · </span>
+                <span className="n-num">
+                  {meta.files.length} file{meta.files.length === 1 ? '' : 's'}
                 </span>
-              )}
+                {playable > 0 && (
+                  <>
+                    <span aria-hidden="true"> · </span>
+                    <span className="n-num flai-playable">{playable} playable</span>
+                  </>
+                )}
+              </p>
             </div>
+            {meta.files.length > FILTER_THRESHOLD && (
+              <div className="n-field flai-filter">
+                <label className="n-sr-only" htmlFor="file-filter">
+                  Filter files by name
+                </label>
+                <input
+                  id="file-filter"
+                  className="n-input n-input-sm"
+                  type="search"
+                  placeholder="Filter…"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
-          {meta.files.length > FILTER_THRESHOLD && (
-            <div className="n-field">
-              <label className="n-sr-only" htmlFor="file-filter">
-                Filter files by name
-              </label>
-              <input
-                id="file-filter"
-                className="n-input"
-                type="search"
-                placeholder={`Filter ${meta.files.length} files…`}
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
-            </div>
-          )}
-
-          {/* tabindex per nilam's .n-table-scroll note: a region that scrolls with the mouse
-              and not with the keyboard fails 2.1.1. */}
+          {/* tabindex per nilam's .n-table-scroll note: a region that scrolls with the mouse and
+              not with the keyboard fails 2.1.1. */}
           <div className="n-table-scroll flai-files" tabIndex={0}>
             <table className="n-table">
               <thead>
@@ -396,7 +368,11 @@ export function App() {
                             </button>
                           )}
                           <a
-                            className={justStarted ? 'n-btn n-btn-sm n-btn-ok' : 'n-btn n-btn-sm'}
+                            className={
+                              justStarted
+                                ? 'n-btn n-btn-sm n-btn-ok flai-pop'
+                                : 'n-btn n-btn-sm'
+                            }
                             href={api.downloadUrl(meta.infoHash, file.index, url.trim())}
                             download={file.name}
                             onClick={() => onSave(file)}
@@ -417,33 +393,13 @@ export function App() {
                 {visible.length === 0 && (
                   <tr>
                     <td colSpan={4} className="flai-empty">
-                      No file matches “{filter}”.
+                      Nothing matches “{filter}”
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-
-          {started.length > 0 ? (
-            /* The one rule a user cannot guess and will otherwise meet as a mysteriously failed
-               download in Chrome: the bridge keeps a single sliding window per torrent, so a
-               second file started now is refused rather than queued. */
-            <div className="n-note n-note-info" role="status">
-              <span className="n-note-glyph" aria-hidden="true">
-                i
-              </span>
-              <div>
-                <span className="n-note-title">Sent to your browser.</span> It appears in your
-                downloads. One file at a time — starting another now would be refused.
-              </div>
-            </div>
-          ) : (
-            <p className="n-hint">
-              Saving uses your browser&rsquo;s own download manager, so it survives a restart of
-              the bridge on its own. One file at a time.
-            </p>
-          )}
         </section>
       )}
     </main>
