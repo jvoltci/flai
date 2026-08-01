@@ -57,6 +57,7 @@ export function App() {
   const [player, setPlayer] = useState<FileEntry | null>(null);
   const [filter, setFilter] = useState('');
   const [started, setStarted] = useState<number[]>([]);
+  const [zipStarted, setZipStarted] = useState(false);
 
   const magnetRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -111,6 +112,7 @@ export function App() {
       setPlayer(null);
       setFilter('');
       setStarted([]);
+      setZipStarted(false);
       try {
         setMeta(await api.metadata(magnet));
       } catch (err) {
@@ -305,21 +307,43 @@ export function App() {
                 )}
               </p>
             </div>
-            {meta.files.length > FILTER_THRESHOLD && (
-              <div className="n-field flai-filter">
-                <label className="n-sr-only" htmlFor="file-filter">
-                  Filter files by name
-                </label>
-                <input
-                  id="file-filter"
-                  className="n-input n-input-sm"
-                  type="search"
-                  placeholder="Filter…"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                />
-              </div>
-            )}
+            <div className="n-cluster flai-results-tools">
+              {meta.files.length > FILTER_THRESHOLD && (
+                <div className="n-field flai-filter">
+                  <label className="n-sr-only" htmlFor="file-filter">
+                    Filter files by name
+                  </label>
+                  <input
+                    id="file-filter"
+                    className="n-input n-input-sm"
+                    type="search"
+                    placeholder="Filter…"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                </div>
+              )}
+              {meta.files.length > 1 && (
+                /* One action instead of thirty. It is the same single reader as any other
+                   download — archiver consumes one file's windowed stream at a time — so it
+                   costs the bridge no more memory than saving one file does. */
+                <a
+                  className="n-btn n-btn-sm"
+                  href={api.archiveUrl(meta.infoHash, url.trim())}
+                  download={`${meta.name}.zip`}
+                  onClick={() => setZipStarted(true)}
+                  title="Every file in one archive"
+                >
+                  {zipStarted ? (
+                    <>
+                      <span aria-hidden="true">✓</span> Started
+                    </>
+                  ) : (
+                    'Save all (.zip)'
+                  )}
+                </a>
+              )}
+            </div>
           </div>
 
           {/* tabindex per nilam's .n-table-scroll note: a region that scrolls with the mouse and

@@ -36,6 +36,23 @@ Together those mean **a download survives a server restart with no client-side c
 The honest limit: if you cancel it in Chrome, it's cancelled. There is no queue here to resume
 it from.
 
+## Saving everything at once
+
+`Save all (.zip)` streams every file in the torrent as one archive. It is stored, not deflated
+— torrent payloads are already compressed and the bridge has a tenth of a vCPU.
+
+It costs the bridge no more memory than saving a single file, which is not obvious and is the
+whole reason the route exists again. v4 deleted it because `archiver`'s obvious usage calls
+`createReadStream()` for every file before any of them is consumed, selecting every piece of
+every file at once. The files are now appended as **lazy async generators**: an unconsumed
+generator has opened nothing, and archiver reads them one at a time, so exactly one 16 MB
+window is ever in flight.
+
+Two things it gives up against saving one file: **no size** and **no resume**. The archive is
+generated as it is sent, so its length is unknown when the headers go out — Chrome shows an
+unknown size, and if the transfer breaks it starts over rather than resuming with a `Range`.
+Big multi-file torrents are still better saved one file at a time.
+
 ## The page
 
 One card of controls, one table. What is worth knowing about it:

@@ -287,7 +287,14 @@
     gap: var(--space-4);
     flex-wrap: wrap;
   }
-  .flai-filter { flex: 0 1 12rem; }
+  /* Filter and "save all" share the right-hand end of the results header. Wrapping rather than
+     shrinking, so on a narrow card the zip button keeps its full label instead of turning into
+     an ellipsis. */
+  .flai-results-tools {
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+  .flai-filter { flex: 0 1 10rem; }
   /* Size, count and playable as one quiet line rather than three badges. Badges shout, and
      these are reference figures you glance at, not statuses you act on. */
   .flai-meta-line {

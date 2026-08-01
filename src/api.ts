@@ -54,11 +54,6 @@ export class ApiClient {
     return this.#token !== null;
   }
 
-  /** The service worker does its own fetching, so it needs the token handed to it. */
-  get token(): string | null {
-    return this.#token;
-  }
-
   signOut(): void {
     this.#token = null;
     sessionStorage.removeItem(TOKEN_KEY);
@@ -90,6 +85,17 @@ export class ApiClient {
   streamUrl(infoHash: string, fileIndex: number): string {
     const url = new URL(`${this.baseUrl}/torrent/${infoHash}/${fileIndex}`);
     if (this.#token) url.searchParams.set('t', this.#token);
+    return url.toString();
+  }
+
+  /* Every file, as one zip. No Content-Length and no resume — the archive is generated as it
+   * is sent, so its size is not known when the headers go out. That is the trade for one
+   * action instead of thirty, and the UI says so rather than letting it be a surprise. */
+  archiveUrl(infoHash: string, magnet: string): string {
+    const url = new URL(`${this.baseUrl}/torrent/${infoHash}`);
+    if (this.#token) url.searchParams.set('t', this.#token);
+    url.searchParams.set('dl', '1');
+    url.searchParams.set('m', magnet);
     return url.toString();
   }
 
