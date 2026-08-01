@@ -58,6 +58,7 @@ export function App() {
   const [player, setPlayer] = useState<FileEntry | null>(null);
   const [filter, setFilter] = useState('');
   const [started, setStarted] = useState<number[]>([]);
+  const [saving, setSaving] = useState<number | null>(null);
 
   const saved = useWishlist();
   const magnetRef = useRef<HTMLInputElement>(null);
@@ -144,14 +145,41 @@ export function App() {
     [load]
   );
 
-  const onSave = useCallback((file: FileEntry) => {
-    /* An <a download> gives the page no signal at all, and Chrome's download bar may well be
-     * collapsed — so clicking Save looked like nothing happening. This is the acknowledgement. */
-    setStarted((current) => [...new Set([...current, file.index])]);
-    setTimeout(() => {
-      setStarted((current) => current.filter((i) => i !== file.index));
-    }, STARTED_MS);
-  }, []);
+  /* Ask, then hand the URL over.
+   *
+   * This used to be a plain <a download>, which meant the browser's download manager owned the
+   * outcome and the page never heard about it. A refusal — another file from the same torrent
+   * still downloading — arrived as a 120-byte JSON file saved under the name of the episode you
+   * wanted. One probe request first, and the refusal lands on the page instead. */
+  const onSave = useCallback(
+    async (file: FileEntry) => {
+      if (!meta || saving !== null) return;
+      const magnet = url.trim();
+      setSaving(file.index);
+      setError(null);
+      try {
+        await api.probe(meta.infoHash, file.index, magnet);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'could not start that download');
+        return;
+      } finally {
+        setSaving(null);
+      }
+
+      const link = document.createElement('a');
+      link.href = api.downloadUrl(meta.infoHash, file.index, magnet);
+      link.download = file.name;
+      link.click();
+
+      /* The browser's download bar may well be collapsed, so starting one can look like nothing
+       * happening. This is the acknowledgement. */
+      setStarted((current) => [...new Set([...current, file.index])]);
+      setTimeout(() => {
+        setStarted((current) => current.filter((i) => i !== file.index));
+      }, STARTED_MS);
+    },
+    [api, meta, url, saving]
+  );
 
   const playable = meta ? meta.files.filter((f) => f.streamable).length : 0;
   const needle = filter.trim().toLowerCase();
@@ -436,24 +464,27 @@ export function App() {
                               {playing ? 'Playing' : 'Play'}
                             </button>
                           )}
-                          <a
+                          <button
+                            type="button"
                             className={
                               justStarted
                                 ? 'n-btn n-btn-sm n-btn-ok flai-pop'
                                 : 'n-btn n-btn-sm'
                             }
-                            href={api.downloadUrl(meta.infoHash, file.index, url.trim())}
-                            download={file.name}
-                            onClick={() => onSave(file)}
+                            onClick={() => void onSave(file)}
+                            disabled={saving !== null}
+                            aria-busy={saving === file.index}
                           >
                             {justStarted ? (
                               <>
                                 <span aria-hidden="true">✓</span> Started
                               </>
+                            ) : saving === file.index ? (
+                              'Asking…'
                             ) : (
                               'Save'
                             )}
-                          </a>
+                          </button>
                         </div>
                       </td>
                     </tr>

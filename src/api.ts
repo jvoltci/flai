@@ -99,6 +99,18 @@ export class ApiClient {
     return url.toString();
   }
 
+  /* Asks whether a download would be served, before handing the URL to the browser.
+   *
+   * Once the download manager has a URL the page gets no say in it — a 409 is not an error the
+   * user sees, it is a 120-byte JSON file saved under the name of the episode they wanted. One
+   * round trip, and it reads no bytes from the swarm. */
+  async probe(infoHash: string, fileIndex: number, magnet: string): Promise<void> {
+    const url = new URL(this.downloadUrl(infoHash, fileIndex, magnet));
+    url.searchParams.set('probe', '1');
+    const res = await fetch(url, { headers: this.#auth() });
+    if (!res.ok) throw await this.#error(res);
+  }
+
   watch(infoHash: string, onTick: (stats: TorrentStats) => void): () => void {
     const url = new URL(`${this.baseUrl}/stats/${infoHash}`);
     if (this.#token) url.searchParams.set('t', this.#token);
