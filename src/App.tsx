@@ -272,9 +272,11 @@ export function App() {
         )}
       </div>
 
-      {!settled && saved.items.length > 0 && (
-        /* Only in the idle state. This is the "what was I going to download" list, and once a
-           torrent is open it is answering a question you have already answered. */
+      {signedIn && !settled && saved.items.length > 0 && (
+        /* Signed in, and only in the idle state. Signed in because the list is the names of
+           things you meant to download — showing it on the locked screen leaks them to anyone
+           who opens the page. Idle only because once a torrent is open the list is answering a
+           question you have already answered. */
         <section className="n-card n-card-pad n-stack flai-tight flai-rise" aria-labelledby="saved-title">
           <h2 className="flai-title" id="saved-title">
             Saved
