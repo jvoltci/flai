@@ -148,9 +148,10 @@ runtime, no JS. Every colour is a nilam token; the page is forced dark with
 There is no progress bar in the page, on purpose. Chrome's download bar already has one, and
 the version that drew its own alongside it is the version that got deleted.
 
-Build output: **~65 KB gzipped JS, ~12.6 KB gzipped CSS**. flai's own CSS layer contains no
-colour literal. The project has exactly one, documented where it sits: `<meta
-name="theme-color">` in `index.html`, which cannot take `var()`.
+Build output: **~66 KB gzipped JS, ~13 KB gzipped CSS**. flai's own CSS layer contains no colour
+literal. The project has exactly two, both documented where they sit and both for the same
+reason — neither can take a `var()`: `<meta name="theme-color">` in `index.html`, and
+`public/favicon.svg`, which is copied verbatim and never sees the stylesheet.
 
 ## Changed in v4
 

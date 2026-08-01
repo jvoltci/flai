@@ -24,9 +24,10 @@
  * rule still wins over nilam.components, but only by one step, so the next accidental
  * override shows up as a specificity question instead of an invisible bypass.
  *
- * There is not one colour literal below this line. Every value is a nilam token. The whole
- * project has exactly one exception and it is documented where it sits: the
- * <meta name="theme-color"> in index.html, which must be a literal and cannot take var().
+ * There is not one colour literal below this line. Every value is a nilam token. The project
+ * has exactly two exceptions, both documented where they sit and both for the same reason —
+ * neither can take a var(): the <meta name="theme-color"> in index.html, and
+ * public/favicon.svg, which is copied verbatim and never sees this stylesheet.
  */
 @layer nilam.utilities {
   /* ── the page and the photograph ──────────────────────────────────────────
