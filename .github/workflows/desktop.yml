@@ -75,7 +75,7 @@ jobs:
           projectPath: desktop
           args: --target ${{ matrix.target }}
           tagName: ${{ github.ref_name }}
-          releaseName: flai desktop ${{ github.ref_name }}
+          releaseName: flai ${{ github.ref_name }}
           releaseBody: |
             Downloads torrents straight to your disk. No account, no server in the middle,
             no size limit, and it picks up where it left off if you close it.
