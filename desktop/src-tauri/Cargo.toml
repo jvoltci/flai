@@ -29,12 +29,6 @@ parking_lot = "0.12"
 # The end-to-end test drives librqbit directly; it needs the macros the app itself does not.
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 
-# Android only: calling the Kotlin foreground service needs JNI, and ndk-context is how
-# a Rust thread finds the JavaVM and the app Context that the activity already set up.
-[target.'cfg(target_os = "android")'.dependencies]
-jni = "0.21"
-ndk-context = "0.1"
-
 [profile.release]
 codegen-units = 1
 lto = true

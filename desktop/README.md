@@ -57,6 +57,25 @@ download is slow it is because the seeds are gone, and no client setting fixes t
 a real trick against a single web server. A swarm is already parallel — there is nothing to
 split.
 
+## Android
+
+Builds, installs, and downloads real files from the swarm — verified on an emulator. Two things
+it does not do yet, both for the same reason:
+
+- **Downloads pause when you leave the app.** Android suspends a backgrounded process, and
+  keeping one alive needs a foreground service. The Kotlin service is written and in the
+  manifest; what is missing is the call from Rust into it.
+- **No "Open in a player".** Same missing link.
+
+The first attempt made that call through `ndk_context::android_context()`, which aborted the
+process three seconds after launch with SIGABRT. ndk-context is a global that something has to
+populate — ndk-glue or android-activity do; Tauri and wry do neither, and grepping both for
+`ndk_context` returns nothing. It could never have worked, and `panic = "abort"` in release
+means it cannot be caught either. The right shape is a Tauri plugin, whose Kotlin half runs
+inside the activity and already holds the Context.
+
+Downloading itself is unaffected, and measured at 7.8 MB/s.
+
 ## Tests
 
 ```
