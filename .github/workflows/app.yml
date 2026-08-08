@@ -1,4 +1,4 @@
-# Builds the desktop app for every platform flai claims to support.
+# Builds the app for every platform flai claims to support.
 #
 # There is no way around a matrix here: a macOS bundle needs macOS, a Windows installer needs
 # Windows, and Docker only ever gets you the Linux one. These runners are what makes the other
@@ -8,11 +8,11 @@
 # Nothing here is signed. Signing certificates cost money per year, so the first launch shows
 # Gatekeeper on macOS and SmartScreen on Windows. The release notes say so plainly rather than
 # leaving people to guess whether the download is safe.
-name: desktop
+name: app
 
 on:
   push:
-    tags: ['desktop-v*']
+    tags: ['app-v*']
   workflow_dispatch:
 
 jobs:
@@ -157,6 +157,10 @@ jobs:
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/flai.keystore"
           echo "FLAI_KEYSTORE=$RUNNER_TEMP/flai.keystore" >> "$GITHUB_ENV"
+
+      - name: Scaffold the Android project
+        working-directory: desktop
+        run: npx tauri android init
 
       - name: Build the APK
         working-directory: desktop
