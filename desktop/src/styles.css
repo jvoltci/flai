@@ -31,7 +31,48 @@
        still fills it. Without this the app is a strip of controls above a void. */
     min-height: 100%;
     margin: 0 auto;
-    padding: var(--space-5) var(--space-4) var(--space-6);
+
+    /* max(), not a plain inset. On Android the activity is edge-to-edge, so without this the
+       header draws under the status bar — the wordmark lands on the clock and Settings lands
+       on the wifi icon. max() keeps the desktop's own padding on a window that has no insets,
+       and clears the status bar and the gesture pill where there are. */
+    padding-block-start: max(var(--space-5), env(safe-area-inset-top));
+    padding-block-end: max(var(--space-6), env(safe-area-inset-bottom));
+    padding-inline: max(var(--space-4), env(safe-area-inset-left))
+      max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  /* ── phone ─────────────────────────────────────────────────────────────── */
+  @media (width < 34rem) {
+    /* The header is a wordmark, a tagline and a button on one line. That fits a window and
+       crowds a phone, so the tagline goes — the empty state below says the same thing in a
+       full sentence, and saying it twice on a 6-inch screen is worse than not saying it. */
+    .flai-sub {
+      display: none;
+    }
+    /* A finger is not a pointer: the small buttons in a download row are 24px targets on a
+       desktop, which is under the 44px anyone can reliably hit. */
+    .flai-item-actions .n-btn,
+    .flai-detail-file .n-btn {
+      min-block-size: 2.25rem;
+      padding-inline: var(--space-3);
+    }
+    /* Four columns of file detail do not fit 360px. Name over bar, size and action beneath. */
+    .flai-detail-file {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas: 'name name name' 'bar size action';
+      row-gap: var(--space-1);
+    }
+    .flai-detail-name { grid-area: name; }
+    .flai-detail-bar { grid-area: bar; }
+    .flai-detail-size { grid-area: size; }
+    .flai-detail-file > .n-btn,
+    .flai-detail-file > .flai-detail-state { grid-area: action; }
+
+    /* The empty state does not need to be a full screen of dashed border on a phone. */
+    .flai-empty {
+      padding-block: var(--space-5);
+    }
   }
 
   /* ── identity ──────────────────────────────────────────────────────────── */

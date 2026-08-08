@@ -68,6 +68,9 @@ export const bridge = {
   pause: (id: number) => invoke<void>('pause', { id }),
   resume: (id: number) => invoke<void>('resume', { id }),
   forget: (id: number, deleteFiles: boolean) => invoke<void>('forget', { id, deleteFiles }),
+  /* Android only. Desktops use the opener plugin from the UI, which already knows how to
+   * reveal a folder in Finder or Explorer. */
+  openDownload: (path: string) => invoke<void>('open_download', { path }),
   getConfig: () => invoke<Config>('get_config'),
   setConfig: (config: Config) => invoke<Config>('set_config', { config }),
   resetConfig: () => invoke<Config>('reset_config'),

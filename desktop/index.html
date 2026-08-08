@@ -2,7 +2,13 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report real numbers. Tauri's
+         Android activity goes edge-to-edge, so without this the header draws underneath the
+         status bar and the wordmark sits on top of the clock. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>flai</title>
   </head>
   <body>

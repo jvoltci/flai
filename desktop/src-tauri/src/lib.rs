@@ -8,6 +8,7 @@
  * session is persisted so closing the app and opening it tomorrow picks up where it left off.
  */
 mod config;
+mod service;
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -509,6 +510,18 @@ fn reset_config(engine: tauri::State<'_, Engine>) -> Result<Config, String> {
     Ok(get_config(engine))
 }
 
+/* Hands a finished download to another app.
+ *
+ * flai has no video player and is not getting one. What people actually download is HEVC with
+ * EAC3 audio, which a WebView cannot play, and doing it properly means Media3 plus the FFmpeg
+ * extension — days of work to land behind VLC. Handing the file over gets every codec the
+ * device's hardware supports, and subtitles for free: a torrent ships Movie.mkv beside
+ * Movie.en.srt, and every serious player picks up a matching .srt by itself. */
+#[tauri::command]
+fn open_download(path: String) -> Result<(), String> {
+    service::open(&path).map_err(err)
+}
+
 /// Where downloads go unless the user says otherwise.
 ///
 /// On a desktop that is the OS Downloads folder itself, not a subfolder of it: a multi-file
@@ -523,11 +536,12 @@ fn reset_config(engine: tauri::State<'_, Engine>) -> Result<Config, String> {
 fn default_downloads(app: &tauri::App) -> PathBuf {
     #[cfg(target_os = "android")]
     {
-        return app
-            .path()
-            .app_data_dir()
-            .map(|d| d.join("downloads"))
-            .unwrap_or_else(|_| PathBuf::from("/data/local/tmp"));
+        // getExternalFilesDir, not app_data_dir. Both are writable without any permission, but
+        // app_data_dir is /data/user/0/<pkg>, which no file manager can open without root — a
+        // download that lands somewhere the user cannot reach has not really finished.
+        return service::downloads_dir()
+            .or_else(|| app.path().app_data_dir().ok().map(|d| d.join("downloads")))
+            .unwrap_or_else(|| PathBuf::from("/data/local/tmp"));
     }
     #[cfg(not(target_os = "android"))]
     {
@@ -536,6 +550,43 @@ fn default_downloads(app: &tauri::App) -> PathBuf {
             .or_else(|_| app.path().app_data_dir().map(|d| d.join("downloads")))
             .unwrap_or_else(|_| PathBuf::from("."))
     }
+}
+
+/* What the notification says, or None when nothing is running.
+ *
+ * On Android this is the difference between downloading and being suspended, so it counts what
+ * is actually moving rather than what exists: a finished torrent left seeding is not a reason
+ * to hold the CPU awake, and neither is a paused one. */
+fn downloading_summary(session: &Arc<Session>) -> Option<String> {
+    let (active, speed, done, total) = session.with_torrents(|iter| {
+        let mut active = 0usize;
+        let mut speed = 0f64;
+        let mut done = 0u64;
+        let mut total = 0u64;
+        for (_, handle) in iter {
+            let stats = handle.stats();
+            if stats.finished || handle.is_paused() {
+                continue;
+            }
+            if let Some(live) = stats.live.as_ref() {
+                active += 1;
+                speed += live.download_speed.mbps;
+                done += stats.progress_bytes;
+                total += stats.total_bytes;
+            }
+        }
+        (active, speed, done, total)
+    });
+
+    if active == 0 {
+        return None;
+    }
+    let percent = if total > 0 { done * 100 / total } else { 0 };
+    let mbps = speed * 125_000.0 / 1_048_576.0;
+    Some(format!(
+        "{active} download{} · {percent}% · {mbps:.1} MB/s",
+        if active == 1 { "" } else { "s" }
+    ))
 }
 
 /* Puts the rest of the files back once the prioritised ones have landed.
@@ -547,6 +598,11 @@ fn watch_priorities(session: Arc<Session>, engine_state: tauri::AppHandle) {
         loop {
             tokio::time::sleep(RESTORE_TICK).await;
             let engine = engine_state.state::<Engine>();
+
+            /* Two jobs in one loop, because they ask the same question two seconds apart and a
+             * second timer would just wake the CPU twice for it. */
+            service::set(downloading_summary(&session));
+
             let pending: Vec<(usize, Vec<usize>)> = engine
                 .priority
                 .lock()
@@ -646,7 +702,8 @@ pub fn run() {
             forget,
             get_config,
             set_config,
-            reset_config
+            reset_config,
+            open_download
         ])
         .run(tauri::generate_context!())
         .expect("error while running flai");

@@ -247,6 +247,20 @@ export function App() {
   );
 }
 
+/* Two platforms, two right answers.
+ *
+ * A desktop has a file manager, so "Show" reveals the folder in Finder or Explorer. Android has
+ * no such thing, so the useful action is handing the file to whatever app can play it — which
+ * is also why flai contains no video player: the content is HEVC with EAC3, a WebView cannot
+ * play it, and VLC on the same phone can. */
+async function reveal(path: string) {
+  try {
+    await revealItemInDir(path);
+  } catch {
+    await bridge.openDownload(path);
+  }
+}
+
 function Download({
   row,
   open,
@@ -313,10 +327,15 @@ function Download({
           )}
           <button
             type="button"
-            className="n-btn n-btn-sm"
-            onClick={() => void revealItemInDir(row.outputFolder)}
+            className={row.finished ? 'n-btn n-btn-sm n-btn-fill' : 'n-btn n-btn-sm'}
+            onClick={() => void reveal(row.outputFolder)}
+            title={
+              row.finished
+                ? 'Open it in whatever player or viewer you already have'
+                : 'Show the folder it is downloading into'
+            }
           >
-            Show
+            {row.finished ? 'Open' : 'Show'}
           </button>
           <button
             type="button"
