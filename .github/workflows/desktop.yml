@@ -86,6 +86,7 @@ jobs:
             | macOS (Intel) | `_x64.dmg` |
             | Windows | `_x64-setup.exe` |
             | Linux | `.AppImage` or `.deb` |
+            | Android | `.apk` — sideload it; Play will not list a torrent client |
 
             **These builds are not code-signed.** A signing certificate is a yearly fee and
             this is a free tool, so the first launch needs one extra step:
@@ -99,3 +100,81 @@ jobs:
             never launched — if one of them misbehaves, that is why.
           releaseDraft: true
           prerelease: false
+
+  # Android is its own job rather than a matrix row: it needs a JDK and the Android SDK that
+  # none of the desktop targets want, and it produces one universal APK instead of a per-arch
+  # bundle. Folding it into the matrix would mean `if:` guards on half the steps.
+  android:
+    name: Android
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: NDK
+        run: |
+          sdkmanager --install "ndk;27.2.12479018" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: flai/desktop/src-tauri -> target
+          key: android
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - run: npm ci
+        working-directory: desktop
+
+      # The keystore arrives base64 in a secret, because a repository cannot hold the binary.
+      # Without the secrets the build still runs and produces an unsigned APK, so a fork is not
+      # blocked on credentials it cannot have.
+      # Through env rather than referencing secrets in `if:` directly, which is not reliably
+      # available in step conditions.
+      - name: Restore the signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No signing secret set — the APK will be unsigned."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/flai.keystore"
+          echo "FLAI_KEYSTORE=$RUNNER_TEMP/flai.keystore" >> "$GITHUB_ENV"
+
+      - name: Build the APK
+        working-directory: desktop
+        env:
+          FLAI_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          FLAI_KEY_ALIAS: flai
+          FLAI_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: npx tauri android build --apk
+
+      - name: Name it something a human would recognise
+        id: apk
+        run: |
+          src=$(find desktop/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
+          cp "$src" "$RUNNER_TEMP/flai_${{ github.ref_name }}.apk"
+          echo "path=$RUNNER_TEMP/flai_${{ github.ref_name }}.apk" >> $GITHUB_OUTPUT
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ${{ steps.apk.outputs.path }}
+          draft: true

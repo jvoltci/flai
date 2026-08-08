@@ -331,9 +331,10 @@ export function App() {
         {!signedIn && (
           <p className="n-hint flai-centred flai-native">
             <a href={DESKTOP_RELEASES} target="_blank" rel="noreferrer">
-              Get the desktop app
+              Get the app
             </a>{' '}
-            for whole folders at once, no size limit, and downloads that resume after a restart.
+            for Mac, Windows, Linux or Android — whole folders at once, no size limit, and
+            downloads that carry on after a restart.
           </p>
         )}
       </div>
