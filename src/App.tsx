@@ -4,7 +4,16 @@ import { Player } from './Player';
 import { formatBytes } from './format';
 import { useWishlist, savedAgo } from './wishlist';
 
-const DEFAULT_API = 'https://flai-api.onrender.com';
+/* A box we own, not Render's free tier.
+ *
+ * The visible difference is the wait: Render slept after 15 idle minutes and took about a
+ * minute to wake, which is what the "Waking the bridge" spinner below exists for. This one is
+ * always on. It also has a disk, no 100 GB monthly egress cap, and can accept inbound peer
+ * connections — the last of which is the real speed ceiling, since a host that only dials out
+ * finds hundreds of peers and connects to a dozen.
+ *
+ * Render still runs and still works; set VITE_API_URL to fall back to it. */
+const DEFAULT_API = 'https://maia.altrusian.com/flai';
 const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAULT_API;
 
 /** How long a Save button stays acknowledged. Long enough to notice, short enough to re-click. */
