@@ -38,14 +38,20 @@ export class ApiError extends Error {
 const TOKEN_KEY = 'flai.token';
 const EXP_KEY = 'flai.token.expiresAt';
 
-/* sessionStorage, not localStorage: the token is a bearer credential, so scoping it to the
- * tab means closing the tab ends the session. The password itself is never stored. */
+/* localStorage, so closing the tab does not end the session — the token outlives the browser
+ * and you sign in once a day rather than once a visit.
+ *
+ * This was sessionStorage, on the reasoning that a bearer credential should be scoped to the
+ * tab. The reasoning still holds; the balance does not. This is a two-person tool behind one
+ * password, on machines those two people own, and the expiry does the real work: the token is
+ * an HMAC over its own expiry keyed by PASS, so it is useless after 12 hours and changing PASS
+ * invalidates every one ever issued. The password itself is still never stored anywhere. */
 export class ApiClient {
   #token: string | null = null;
 
   constructor(readonly baseUrl: string) {
-    const token = sessionStorage.getItem(TOKEN_KEY);
-    const expiresAt = Number(sessionStorage.getItem(EXP_KEY) ?? 0);
+    const token = localStorage.getItem(TOKEN_KEY);
+    const expiresAt = Number(localStorage.getItem(EXP_KEY) ?? 0);
     if (token && expiresAt > Date.now()) this.#token = token;
     else this.signOut();
   }
@@ -56,8 +62,8 @@ export class ApiClient {
 
   signOut(): void {
     this.#token = null;
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(EXP_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EXP_KEY);
   }
 
   async signIn(password: string): Promise<void> {
@@ -67,8 +73,8 @@ export class ApiClient {
       body: JSON.stringify({ password }),
     });
     this.#token = body.token;
-    sessionStorage.setItem(TOKEN_KEY, body.token);
-    sessionStorage.setItem(EXP_KEY, String(body.expiresAt));
+    localStorage.setItem(TOKEN_KEY, body.token);
+    localStorage.setItem(EXP_KEY, String(body.expiresAt));
   }
 
   async metadata(magnet: string, signal?: AbortSignal): Promise<Metadata> {
