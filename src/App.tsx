@@ -302,9 +302,17 @@ export function App() {
                 That is not a magnet link
               </p>
             ) : busy ? (
+              /* The page's one genuinely long wait, so it gets the larger ring and the
+                 elapsed-time behaviour nilam 0.7 builds in: quiet under 1.2s so a fast answer
+                 does not flash, and a slow breath after 10s that says it has not hung.
+                 .n-slow is a child that reveals itself at 10s with no JavaScript — which is
+                 exactly when someone starts wondering whether this is broken. */
               <p className="n-loading flai-centred" role="status">
-                <span className="n-spinner n-spinner-sm" />
+                <span className="n-spinner n-spinner-lg" />
                 Asking the swarm
+                <span className="n-slow">
+                  — a cold torrent spends its first minute finding peers
+                </span>
               </p>
             ) : (
               !settled && <p className="n-hint flai-centred">Paste to load</p>

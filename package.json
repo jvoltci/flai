@@ -1,7 +1,7 @@
 {
   "name": "flai",
   "version": "4.0.0",
-  "description": "flai \u2014 resumable torrent downloader in the browser",
+  "description": "flai — resumable torrent downloader in the browser",
   "private": true,
   "type": "module",
   "homepage": "https://jvoltci.github.io/flai",
@@ -14,7 +14,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "nilam": "^0.6.0",
+    "nilam": "^0.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
