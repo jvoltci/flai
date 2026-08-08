@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use librqbit::api::TorrentIdOrHash;
+use librqbit::dht::PersistentDhtConfig;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, Session, SessionOptions,
     SessionPersistenceConfig,
@@ -508,14 +509,33 @@ fn reset_config(engine: tauri::State<'_, Engine>) -> Result<Config, String> {
     Ok(get_config(engine))
 }
 
-/// Where downloads go unless the user says otherwise. The OS Downloads folder itself, not a
-/// subfolder of it: a multi-file torrent already brings its own name, and burying that inside a
-/// folder called "flai" names the download after the program instead of after the thing.
+/// Where downloads go unless the user says otherwise.
+///
+/// On a desktop that is the OS Downloads folder itself, not a subfolder of it: a multi-file
+/// torrent already brings its own name, and burying that inside a folder called "flai" names
+/// the download after the program instead of after the thing.
+///
+/// On Android there is no such choice. Scoped storage means an app may only write freely inside
+/// its own external files directory, and reaching anywhere else needs the Storage Access
+/// Framework, which hands out content:// URIs rather than paths — and librqbit writes to paths.
+/// So Android gets the app directory, which file managers can still browse, and the UI says so
+/// rather than pretending otherwise.
 fn default_downloads(app: &tauri::App) -> PathBuf {
-    app.path()
-        .download_dir()
-        .or_else(|_| app.path().app_data_dir().map(|d| d.join("downloads")))
-        .unwrap_or_else(|_| PathBuf::from("."))
+    #[cfg(target_os = "android")]
+    {
+        return app
+            .path()
+            .app_data_dir()
+            .map(|d| d.join("downloads"))
+            .unwrap_or_else(|_| PathBuf::from("/data/local/tmp"));
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        app.path()
+            .download_dir()
+            .or_else(|_| app.path().app_data_dir().map(|d| d.join("downloads")))
+            .unwrap_or_else(|_| PathBuf::from("."))
+    }
 }
 
 /* Puts the rest of the files back once the prioritised ones have landed.
@@ -572,13 +592,30 @@ pub fn run() {
             let config_dir = app.path().app_config_dir()?;
             let cfg = Config::load(&config_dir);
 
-            /* Persisted, which is the whole difference between this and the web app. Sessions
-             * are written to the OS config directory, so a download interrupted by closing the
-             * app — or by a reboot — is still there next time, at the byte it reached. */
+            /* Persisted, which is the whole difference between this and the web app. A
+             * download interrupted by closing the app — or by a reboot — is still there next
+             * time, at the byte it reached.
+             *
+             * Both paths are given explicitly, and that is not tidiness. Left to itself
+             * librqbit asks the `directories` crate where to put the session and the DHT
+             * routing table, which is right on a desktop and wrong on Android, where the answer
+             * is a path the app cannot write. The first Android build died on launch with
+             * "error initializing persistent DHT" before the window ever appeared. Pointing
+             * both at Tauri's own app-config directory works everywhere, because that is the
+             * one directory every platform guarantees us. */
+            let session_dir = config_dir.join("session");
+            std::fs::create_dir_all(&session_dir)?;
+
             let session = tauri::async_runtime::block_on(Session::new_with_opts(
                 downloads.clone(),
                 SessionOptions {
-                    persistence: Some(SessionPersistenceConfig::Json { folder: None }),
+                    persistence: Some(SessionPersistenceConfig::Json {
+                        folder: Some(session_dir.clone()),
+                    }),
+                    dht_config: Some(PersistentDhtConfig {
+                        config_filename: Some(session_dir.join("dht.json")),
+                        ..Default::default()
+                    }),
                     enable_upnp_port_forwarding: true,
                     ..Default::default()
                 },
