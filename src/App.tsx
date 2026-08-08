@@ -4,15 +4,15 @@ import { Player } from './Player';
 import { formatBytes } from './format';
 import { useWishlist, savedAgo } from './wishlist';
 
-/* A box we own, not Render's free tier.
+/* A box we own. There is no longer a hosted fallback — Render is gone.
  *
- * The visible difference is the wait: Render slept after 15 idle minutes and took about a
- * minute to wake, which is what the "Waking the bridge" spinner below exists for. This one is
- * always on. It also has a disk, no 100 GB monthly egress cap, and can accept inbound peer
- * connections — the last of which is the real speed ceiling, since a host that only dials out
- * finds hundreds of peers and connects to a dozen.
+ * The visible difference is the wait: the free tier slept after 15 idle minutes and took about
+ * a minute to wake, which is the entire reason the "Waking the bridge" spinner exists. This is
+ * always on. It also has a disk, no monthly egress cap, and can accept inbound peer
+ * connections — the last of which is the real speed ceiling, since a host that can only dial
+ * out finds hundreds of peers and connects to a dozen.
  *
- * Render still runs and still works; set VITE_API_URL to fall back to it. */
+ * VITE_API_URL still overrides this, for pointing a dev build at localhost. */
 const DEFAULT_API = 'https://maia.altrusian.com/flai';
 const apiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? DEFAULT_API;
 
@@ -249,12 +249,14 @@ export function App() {
               </p>
             )}
             {signingIn && (
-              /* The free tier sleeps after 15 idle minutes and takes about a minute to wake,
-                 and there is no keep-warm ping — it cost 730 of the 750 free hours a month.
-                 A spinner with no explanation reads as a hang. */
+              /* Just "Signing in" now. This used to promise a minute's wait, because Render's
+                 free tier slept after 15 idle minutes and there was no keep-warm ping — one
+                 cost 730 of the 750 free hours a month. The bridge now runs on a box that
+                 never sleeps, so the old copy would be a lie that makes a fast thing feel
+                 slow. */
               <p className="n-loading flai-centred" role="status">
                 <span className="n-spinner n-spinner-sm" />
-                Waking the bridge — this takes about a minute
+                Signing in
               </p>
             )}
           </form>
