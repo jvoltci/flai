@@ -594,4 +594,80 @@
     grid-area: action;
     justify-content: flex-end;
   }
+
+  /* ── the ⓘ next to every setting ───────────────────────────────────────── */
+
+  .flai-setting-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* A circle, not a button: it sits beside a label rather than in a row of actions, and the
+     bordered pill the other buttons use would read as the more important thing on the line.
+     Sized to 1.75rem so it is still a real target for a finger. */
+  .flai-help {
+    all: unset;
+    flex: none;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-full);
+    border: 1px solid var(--neutral-7);
+    color: var(--neutral-11);
+    font-size: var(--text-000);
+    font-style: italic;
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+  .flai-help:hover {
+    border-color: var(--brand-8);
+    color: var(--brand-11);
+  }
+  .flai-help[aria-expanded='true'] {
+    background: var(--brand-9);
+    border-color: var(--brand-9);
+    color: var(--brand-contrast, #fff);
+  }
+  .flai-help:focus-visible {
+    outline: var(--ring-width) solid var(--brand-8);
+    outline-offset: var(--ring-offset);
+  }
+
+  /* Tinted and rule-marked, so an open explanation is obviously an aside and not another field
+     the user is expected to fill in. */
+  .flai-help-text {
+    margin: 0;
+    padding: var(--space-3);
+    border-inline-start: 2px solid var(--brand-7);
+    border-radius: 0 var(--r-3) var(--r-3) 0;
+    background: var(--neutral-3);
+    font-size: var(--text-00);
+    color: var(--neutral-12);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    text-wrap: pretty;
+  }
+  .flai-help-text p {
+    margin: 0;
+  }
+  .flai-help-text code {
+    font-family: var(--font-mono);
+    font-size: var(--text-000);
+    overflow-wrap: anywhere;
+  }
+  .flai-help-eg {
+    color: var(--neutral-11);
+  }
+  /* The one part people skip and then need. Warning colour earns its keep here: every setting in
+     this panel has a way of looking like it worked when it did not. */
+  .flai-help-watch {
+    color: var(--warn-11);
+  }
+
+  .flai-add {
+    align-self: flex-start;
+  }
 }
