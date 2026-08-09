@@ -1,5 +1,5 @@
 {
-  "name": "flai-desktop",
+  "name": "flai-app",
   "version": "1.0.0",
   "description": "flai — a torrent downloader that saves straight to disk",
   "private": true,

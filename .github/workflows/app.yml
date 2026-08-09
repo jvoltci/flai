@@ -56,23 +56,23 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: flai/desktop/src-tauri -> target
+          workspaces: flai/app/src-tauri -> target
           key: ${{ matrix.target }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: app/package-lock.json
 
       - run: npm ci
-        working-directory: desktop
+        working-directory: app
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: desktop
+          projectPath: app
           args: --target ${{ matrix.target }}
           tagName: ${{ github.ref_name }}
           releaseName: flai ${{ github.ref_name }}
@@ -133,17 +133,17 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
         with:
-          workspaces: flai/desktop/src-tauri -> target
+          workspaces: flai/app/src-tauri -> target
           key: android
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: app/package-lock.json
 
       - run: npm ci
-        working-directory: desktop
+        working-directory: app
 
       # The keystore arrives base64 in a secret, because a repository cannot hold the binary,
       # and lands as keystore.properties — NOT as environment variables. The Tauri CLI builds
@@ -163,7 +163,7 @@ jobs:
             exit 1
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/flai.keystore"
-          cat > desktop/src-tauri/gen/android/keystore.properties <<EOF
+          cat > app/src-tauri/gen/android/keystore.properties <<EOF
           storeFile=$RUNNER_TEMP/flai.keystore
           storePassword=$KEYSTORE_PASSWORD
           keyAlias=flai
@@ -171,24 +171,24 @@ jobs:
           EOF
 
       - name: Scaffold the Android project
-        working-directory: desktop
+        working-directory: app
         run: npx tauri android init
 
       - name: Build the APK
-        working-directory: desktop
+        working-directory: app
         run: npx tauri android build --apk
 
       # Belt and braces: prove it is signed before it goes near a release, because the failure
       # mode of an unsigned one is a user seeing "invalid package".
       - name: Verify the signature
         run: |
-          apk=$(find desktop/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
+          apk=$(find app/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
           "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$apk" | head -5
 
       - name: Name it something a human would recognise
         id: apk
         run: |
-          src=$(find desktop/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
+          src=$(find app/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
           cp "$src" "$RUNNER_TEMP/flai_${{ github.ref_name }}.apk"
           echo "path=$RUNNER_TEMP/flai_${{ github.ref_name }}.apk" >> $GITHUB_OUTPUT
 

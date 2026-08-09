@@ -1,12 +1,12 @@
-# flai desktop
+# flai app
 
-The same idea as the web app, without the borrowed constraints.
+Mac, Windows, Linux and Android. The same idea as the web page, without the borrowed constraints.
 
 The hosted bridge exists to squeeze BitTorrent through a 512 MB box with no disk: one file at a
 time, a 32 MB sliding window, pieces discarded the moment they are sent. None of that is a
 property of BitTorrent — it is a property of a free-tier server. This has a disk.
 
-| | web | desktop |
+| | web | app |
 |---|---|---|
 | Files at once | one per torrent | all of them |
 | Size limit | none, but one file at a time | none |
@@ -22,7 +22,7 @@ npm run app        # dev window with hot reload
 npm run bundle     # a real .app / .dmg in src-tauri/target/release/bundle
 ```
 
-Releases for macOS, Windows and Linux are built by `.github/workflows/desktop.yml`, on a tag:
+Releases for macOS, Windows, Linux and Android are built by `.github/workflows/app.yml`, on a tag:
 
 ```
 git tag desktop-v1.0.0 && git push --tags
