@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launcher icon's background layer, referenced by mipmap-anydpi-v26/ic_launcher.xml.
+
+  #8a7ef7 is nilam's brand step 9, the same literal as public/favicon.svg on the web page —
+  the one place a colour is written out rather than taken from a token, because neither a
+  launcher icon nor a copied-verbatim favicon can reach a stylesheet.
+
+  Without an adaptive icon at all, which is how this shipped first, Android 8+ takes the legacy
+  ic_launcher.png, masks it to the launcher's shape and puts its own background behind it. The
+  result is the mark floating on white, which is why it did not look like the favicon.
+-->
+<resources>
+    <color name="ic_launcher_background">#8a7ef7</color>
+</resources>

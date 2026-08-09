@@ -35,13 +35,19 @@ val canSign = keystoreProperties.getProperty("storeFile") != null &&
     file(keystoreProperties.getProperty("storeFile")).exists()
 
 android {
-    compileSdk = 36
+    // 35, not 36, and this is empirical rather than conservative. A 36-built APK verified
+    // clean — v2 signed, valid zip, minSdk 24, correct ABIs — installed on an Android 16
+    // emulator and was rejected by a real phone as "package seems invalid". The music project
+    // on this machine builds at 35 and installs on that same phone. Compiling against an SDK
+    // newer than the device can emit manifest and resource forms its parser will not accept,
+    // and the error blames the file rather than the mismatch.
+    compileSdk = 35
     namespace = "com.jvoltci.flai"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "com.jvoltci.flai"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
