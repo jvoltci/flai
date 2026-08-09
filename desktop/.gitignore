@@ -1,4 +1,22 @@
 node_modules
 dist
 src-tauri/target
-src-tauri/gen
+
+# src-tauri/gen was ignored wholesale, which was wrong the moment the Android project
+# was customised: the manifest, the foreground service, the FileProvider paths and the
+# release signing config all live in gen/android and are hand-written. With them ignored,
+# CI regenerated a blank project and built an app with none of it — a build that succeeds
+# and produces the wrong thing, which is worse than one that fails.
+#
+# So the Android project is versioned, and only its build output is not.
+src-tauri/gen/apple
+src-tauri/gen/android/.gradle
+src-tauri/gen/android/build
+src-tauri/gen/android/app/build
+src-tauri/gen/android/local.properties
+src-tauri/gen/android/.idea
+
+# Never the signing key or its passwords.
+src-tauri/gen/android/keystore.properties
+*.keystore
+*.jks

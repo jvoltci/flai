@@ -88,6 +88,9 @@ jobs:
             | Linux | `.AppImage` or `.deb` |
             | Android | `.apk` — sideload it; Play will not list a torrent client |
 
+            **Android:** the first time, Android asks you to allow "install unknown apps" for
+            whichever app opened the file — usually your browser or file manager.
+
             **These builds are not code-signed.** A signing certificate is a yearly fee and
             this is a free tool, so the first launch needs one extra step:
 
@@ -142,21 +145,30 @@ jobs:
       - run: npm ci
         working-directory: desktop
 
-      # The keystore arrives base64 in a secret, because a repository cannot hold the binary.
-      # Without the secrets the build still runs and produces an unsigned APK, so a fork is not
-      # blocked on credentials it cannot have.
-      # Through env rather than referencing secrets in `if:` directly, which is not reliably
-      # available in step conditions.
+      # The keystore arrives base64 in a secret, because a repository cannot hold the binary,
+      # and lands as keystore.properties — NOT as environment variables. The Tauri CLI builds
+      # gradle's environment itself and forwards a fixed list, so anything else exported here
+      # never reaches the signing config. A release build failed exactly that way once.
+      #
+      # An unsigned APK is not a degraded APK, it is an uninstallable one: Android rejects it
+      # with "invalid package", which reads to a user as a corrupt download. So a missing key
+      # fails the job rather than attaching a file nobody can install.
       - name: Restore the signing key
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "No signing secret set — the APK will be unsigned."
-            exit 0
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD must both be set. An unsigned APK cannot be installed, so this stops rather than publishing one."
+            exit 1
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/flai.keystore"
-          echo "FLAI_KEYSTORE=$RUNNER_TEMP/flai.keystore" >> "$GITHUB_ENV"
+          cat > desktop/src-tauri/gen/android/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/flai.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=flai
+          keyPassword=$KEYSTORE_PASSWORD
+          EOF
 
       - name: Scaffold the Android project
         working-directory: desktop
@@ -164,11 +176,14 @@ jobs:
 
       - name: Build the APK
         working-directory: desktop
-        env:
-          FLAI_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          FLAI_KEY_ALIAS: flai
-          FLAI_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: npx tauri android build --apk
+
+      # Belt and braces: prove it is signed before it goes near a release, because the failure
+      # mode of an unsigned one is a user seeing "invalid package".
+      - name: Verify the signature
+        run: |
+          apk=$(find desktop/src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | head -1)
+          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "$apk" | head -5
 
       - name: Name it something a human would recognise
         id: apk

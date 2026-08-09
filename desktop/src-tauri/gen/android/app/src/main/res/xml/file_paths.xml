@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Where downloads land: getExternalFilesDir(), i.e.
+       /sdcard/Android/data/com.jvoltci.flai/files/downloads.
+
+       Chosen over the app's internal files/ directory because that one is invisible to every
+       file manager without root, which would make "your download finished" a lie. This one an
+       app may write without any storage permission, and the user can still browse it. It does
+       go when the app is uninstalled, which the UI says. -->
+  <external-files-path name="downloads" path="downloads/" />
+  <external-path name="my_images" path="." />
+  <cache-path name="my_cache_images" path="." />
+</paths>

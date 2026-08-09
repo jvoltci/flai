@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"What the flai window is allowed to ask the system for.","local":true,"windows":["main"],"permissions":["core:default","dialog:allow-open","opener:allow-reveal-item-in-dir","opener:allow-open-path"]}}
