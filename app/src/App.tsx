@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { Details } from './Details';
+import { Search } from './Search';
+import { Settings } from './Settings';
 import {
+  applyTheme,
   bridge,
   formatBytes,
   formatEta,
+  readTheme,
   type FileEntry,
+  type Theme,
   type TorrentInfo,
   type TorrentRow,
 } from './bridge';
 
 const POLL_MS = 800;
+
+/** Only one of these can be open at a time. The list underneath is always the home. */
+type Panel = 'none' | 'search' | 'settings';
 
 /** Rows the user has picked, keyed by file index. Empty means every file. */
 type Selection = Set<number>;
@@ -35,10 +43,16 @@ export function App() {
   const [rows, setRows] = useState<TorrentRow[]>([]);
   /** Which rows are expanded. Ids, so the set survives the list reordering under it. */
   const [open_, setOpen] = useState<Set<number>>(new Set());
+  const [panel, setPanel] = useState<Panel>('none');
+  const [theme, setTheme] = useState<Theme>(readTheme);
 
   useEffect(() => {
     void bridge.defaultFolder().then(setFolder);
   }, []);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   /* Polling, not events. The list is at most a handful of rows and the call is an in-process
    * function behind an IPC hop — cheaper than the machinery to push, and it cannot get stuck
@@ -117,7 +131,39 @@ export function App() {
       <header className="flai-top">
         <Wordmark />
         <span className="flai-sub">saves straight to your disk</span>
+        <div className="n-cluster flai-top-actions">
+          <button
+            type="button"
+            className={panel === 'search' ? 'n-btn n-btn-sm n-btn-fill' : 'n-btn n-btn-sm'}
+            onClick={() => setPanel(panel === 'search' ? 'none' : 'search')}
+            aria-pressed={panel === 'search'}
+          >
+            Search
+          </button>
+          <button
+            type="button"
+            className={panel === 'settings' ? 'n-btn n-btn-sm n-btn-fill' : 'n-btn n-btn-sm'}
+            onClick={() => setPanel(panel === 'settings' ? 'none' : 'settings')}
+            aria-pressed={panel === 'settings'}
+          >
+            Settings
+          </button>
+          {/* Icon only: the label would be either "Dark" or "Switch to dark" and both read as a
+              statement of what it is rather than what it does. A sun and a moon do not. */}
+          <button
+            type="button"
+            className="n-btn n-btn-sm flai-theme"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'Switch to day' : 'Switch to night'}
+            title={theme === 'dark' ? 'Day' : 'Night'}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+        </div>
       </header>
+
+      {panel === 'search' && <Search onAdded={() => setPanel('none')} />}
+      {panel === 'settings' && <Settings onClose={() => setPanel('none')} />}
 
       <form
         className="flai-command"
@@ -268,6 +314,7 @@ function Download({
           </span>
           {row.name}
         </button>
+        {row.label && <span className="flai-label">{row.label}</span>}
         <span className="flai-item-pct">
           {row.finished ? 'Done' : `${percent.toFixed(percent < 10 ? 1 : 0)}%`}
         </span>
@@ -285,6 +332,10 @@ function Download({
           <span className="flai-bad">{row.error ?? 'failed'}</span>
         ) : row.finished ? (
           <span>seeding · ↑ {formatBytes(row.uploadSpeed)}/s</span>
+        ) : row.queued ? (
+          /* Says which kind of stopped this is. A queued download and a broken one look
+             identical from the outside, and only one of them needs you to do anything. */
+          <span className="flai-queued">waiting its turn</span>
         ) : paused ? (
           <span>paused</span>
         ) : (

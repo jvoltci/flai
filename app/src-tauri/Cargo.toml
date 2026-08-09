@@ -1,6 +1,6 @@
 [package]
 name = "flai-app"
-version = "1.0.0"
+version = "1.1.0"
 description = "flai — a torrent downloader that saves straight to disk"
 edition = "2021"
 rust-version = "1.82"
@@ -20,10 +20,25 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # rust-tls, not the platform TLS: one fewer thing that has to exist on the build machine, and
 # the Windows and Linux runners are cross-built in CI where a system OpenSSL is a liability.
-librqbit = { version = "8.1.1", default-features = false, features = ["rust-tls"] }
+# http-api is what makes "play it before it has finished" work. It is librqbit's own axum
+# server, and its stream route already does Range, seeking and blocking-until-the-piece-arrives —
+# all the parts that are fiddly to get right and pointless to write twice. It is bound to
+# localhost and started read-only, so the only thing it can do is hand bytes to a video player.
+#
+# tracing-subscriber-utils is not optional despite looking it: librqbit 8.1.1's http-api does not
+# compile without it. The log-streaming route calls Api::api_log_lines_stream, which only exists
+# behind that feature, and nothing gates the route to match. Upstream bug, one extra feature to
+# work around.
+librqbit = { version = "8.1.1", default-features = false, features = [
+    "rust-tls",
+    "http-api",
+    "tracing-subscriber-utils",
+] }
 anyhow = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "sync", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net"] }
 parking_lot = "0.12"
+rss = { version = "2.1.0", default-features = false }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [dev-dependencies]
 # The end-to-end test drives librqbit directly; it needs the macros the app itself does not.

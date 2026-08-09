@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" class="light">
   <head>
     <meta charset="utf-8" />
     <!-- viewport-fit=cover is what makes env(safe-area-inset-*) report real numbers. Tauri's
@@ -10,6 +10,13 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>flai</title>
+    <!-- Before first paint, or the app flashes the wrong theme on every launch. The class is
+         already `light` above, so this only ever has to correct someone who chose dark. -->
+    <script>
+      if (localStorage.getItem('flai.theme') === 'dark') {
+        document.documentElement.classList.replace('light', 'dark');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

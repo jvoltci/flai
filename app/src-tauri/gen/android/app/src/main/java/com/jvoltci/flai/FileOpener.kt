@@ -2,6 +2,7 @@ package com.jvoltci.flai
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import java.io.File
@@ -42,6 +43,29 @@ object FileOpener {
         // A chooser rather than the default, because "open with" is genuinely a choice here:
         // people have opinions about video players and the right one differs per file.
         val chooser = Intent.createChooser(view, "Open with").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(chooser)
+    }
+
+    /**
+     * Opens a still-downloading file, streamed from librqbit's server on localhost.
+     *
+     * No FileProvider here: there is no finished file to grant access to. The URL is plain http
+     * on 127.0.0.1, and every Android video player can open one — VLC and MX Player both treat a
+     * network stream exactly like a local file, seek bar included.
+     *
+     * A wildcard video type rather than a guess from the extension. ACTION_VIEW on an http URL
+     * with no type is a browsing intent, and the browser answers it by downloading the file a
+     * second time.
+     */
+    @JvmStatic
+    fun openStream(context: Context, url: String) {
+        val view = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.parse(url), "video/*")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val chooser = Intent.createChooser(view, "Play with").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)

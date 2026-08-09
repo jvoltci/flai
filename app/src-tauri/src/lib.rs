@@ -7,13 +7,16 @@
  * Here there is a disk. So: every file at once, no window, no reader lock, no password, and the
  * session is persisted so closing the app and opening it tomorrow picks up where it left off.
  */
+mod indexers;
 mod service;
+mod settings;
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use librqbit::api::TorrentIdOrHash;
 use librqbit::dht::PersistentDhtConfig;
 use librqbit::{
@@ -27,6 +30,10 @@ use tauri::Manager;
 
 /// How often the background task checks whether a prioritised set has finished.
 const RESTORE_TICK: Duration = Duration::from_secs(2);
+
+/// Feeds are checked every this many ticks — fifteen minutes. Publishers measure their own
+/// update rates in hours, so anything faster is bandwidth spent to learn nothing.
+const FEED_TICKS: u64 = 15 * 60 / 2;
 
 /* No tracker list here, and that is a measured decision rather than an omission.
  *
@@ -64,6 +71,13 @@ struct Engine {
     folders: Mutex<HashMap<usize, String>>,
     wanted: Mutex<HashMap<usize, Vec<usize>>>,
     priority: Mutex<HashMap<usize, Vec<usize>>>,
+    /// The user's own facts: proxy, indexers, feeds, queue depth, schedule, labels.
+    config: Mutex<settings::Settings>,
+    /// Torrents the queue or the schedule stopped — never the ones the user stopped.
+    auto_paused: Mutex<HashSet<usize>>,
+    /// Where librqbit's read-only HTTP server is listening, for handing a file to a player
+    /// before it has finished downloading. 0 if it could not start.
+    stream_port: u16,
 }
 
 impl Engine {
@@ -75,6 +89,9 @@ impl Engine {
             .unwrap_or_else(|| self.downloads.to_string_lossy().to_string())
     }
 
+    fn save_config(&self) -> anyhow::Result<()> {
+        settings::save(&self.config_dir, &self.config.lock())
+    }
 }
 
 #[derive(Serialize)]
@@ -140,6 +157,11 @@ struct TorrentRow {
     /// How many files are being fetched ahead of the rest. 0 when nothing is prioritised.
     priority_count: usize,
     file_count: usize,
+    /// The user's own heading for this download, or empty. Feeds set it automatically.
+    label: String,
+    /// Stopped by the queue or the schedule rather than by the user, which the UI says out loud
+    /// so a download that is not moving never looks like a download that is broken.
+    queued: bool,
 }
 
 /// Tauri wants a serialisable error; anyhow gives good messages. This joins them.
@@ -324,6 +346,14 @@ fn torrents(engine: tauri::State<'_, Engine>) -> Vec<TorrentRow> {
                 output_folder: engine.folder_for(id),
                 priority_count: engine.priority.lock().get(&id).map_or(0, |p| p.len()),
                 file_count: stats.file_progress.len(),
+                label: engine
+                    .config
+                    .lock()
+                    .labels
+                    .get(&handle.info_hash().as_string())
+                    .cloned()
+                    .unwrap_or_default(),
+                queued: engine.auto_paused.lock().contains(&id),
             }
         })
         .collect()
@@ -479,6 +509,128 @@ fn open_download(path: String) -> Result<(), String> {
     service::open(&path).map_err(err)
 }
 
+/* Play it now, before it has finished.
+ *
+ * The URL points at librqbit's own read-only server on localhost, and the trailing filename is
+ * not decoration: players choose a demuxer by extension, and VLC handed a URL ending in `/0`
+ * will guess wrong on exactly the containers people download. The path segment carries `.mkv`
+ * through so it does not have to guess.
+ */
+#[tauri::command]
+fn play(engine: tauri::State<'_, Engine>, id: usize, file: usize) -> Result<(), String> {
+    let url = stream_url(&engine, id, file).map_err(err)?;
+
+    // Two platforms, one command, so the UI never has to ask which one it is on.
+    //
+    // Android needs the intent to declare a video MIME type, or it is a browsing intent and the
+    // browser answers it by downloading the file a second time. A desktop already has a
+    // registered handler for http, and tauri's opener knows how to reach it on all three.
+    #[cfg(target_os = "android")]
+    return service::open_stream(&url).map_err(err);
+
+    #[cfg(not(target_os = "android"))]
+    return tauri_plugin_opener::open_url(&url, None::<&str>).map_err(err);
+}
+
+fn stream_url(engine: &Engine, id: usize, file: usize) -> anyhow::Result<String> {
+    if engine.stream_port == 0 {
+        anyhow::bail!("the local stream server did not start");
+    }
+    let handle = engine
+        .session
+        .get(TorrentIdOrHash::Id(id))
+        .context("that download is gone")?;
+    let listed = handle.with_metadata(|m| file_list(&m.info))??;
+    let name = listed
+        .get(file)
+        .map(|(name, _)| name.rsplit('/').next().unwrap_or(name).to_string())
+        .context("no such file in that torrent")?;
+
+    Ok(format!(
+        "http://127.0.0.1:{}/torrents/{id}/stream/{file}/{}",
+        engine.stream_port,
+        urlencode(&name)
+    ))
+}
+
+/// Enough percent-encoding for a filename in a path segment. Not a general encoder, and not
+/// trying to be: torrent filenames contain spaces, brackets and quotes, and every one of those
+/// either breaks the URL or gets silently mangled by some player.
+fn urlencode(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn get_settings(engine: tauri::State<'_, Engine>) -> settings::Settings {
+    engine.config.lock().clone()
+}
+
+/* Saving settings deliberately does not restart anything.
+ *
+ * The queue depth and the schedule are read fresh on every supervisor tick, so those take effect
+ * within two seconds. The proxy cannot: librqbit builds its connector once when the session
+ * starts and hands it to every peer connection. Returning whether a restart is needed lets the
+ * UI say so plainly, which is better than a proxy setting that appears to save and does nothing.
+ */
+#[tauri::command]
+fn set_settings(
+    engine: tauri::State<'_, Engine>,
+    incoming: settings::Settings,
+) -> Result<bool, String> {
+    let proxy_changed = {
+        let mut config = engine.config.lock();
+        let changed = config.socks_proxy.trim() != incoming.socks_proxy.trim();
+        *config = incoming;
+        changed
+    };
+    engine.save_config().map_err(err)?;
+    Ok(proxy_changed)
+}
+
+#[tauri::command]
+async fn search(engine: tauri::State<'_, Engine>, query: String) -> Result<Vec<indexers::Hit>, String> {
+    let configured = engine.config.lock().indexers.clone();
+    if configured.is_empty() {
+        return Err("no indexers configured yet".into());
+    }
+    Ok(indexers::search(&configured, query.trim()).await)
+}
+
+/// Adds a search result or a pasted .torrent URL whole, which is what you want from a search:
+/// picking files comes from the details view afterwards.
+#[tauri::command]
+async fn add_result(
+    engine: tauri::State<'_, Engine>,
+    url: String,
+    label: String,
+) -> Result<usize, String> {
+    add_url(&engine, url.trim(), label.trim()).await.map_err(err)
+}
+
+#[tauri::command]
+fn set_label(
+    engine: tauri::State<'_, Engine>,
+    info_hash: String,
+    label: String,
+) -> Result<(), String> {
+    {
+        let mut config = engine.config.lock();
+        if label.trim().is_empty() {
+            config.labels.remove(&info_hash);
+        } else {
+            config.labels.insert(info_hash, label.trim().to_string());
+        }
+    }
+    engine.save_config().map_err(err)
+}
+
 /// Where downloads go: the real Downloads folder, the one every other app uses.
 ///
 /// This had a special case that wrote to app_data_dir — /data/user/0/<pkg>, which needs root to
@@ -590,52 +742,232 @@ fn downloading_summary(session: &Arc<Session>) -> Option<String> {
     ))
 }
 
-/* Puts the rest of the files back once the prioritised ones have landed.
+/* Playing a file before it has finished downloading.
  *
- * In the app rather than in the window, because a priority that only resolves while the UI
- * happens to be polling is a priority that gets stuck the moment somebody minimises the app. */
-fn watch_priorities(session: Arc<Session>, engine_state: tauri::AppHandle) {
+ * This is librqbit's own HTTP server, turned on rather than written. Its stream route does Range
+ * requests, seeking, and blocking until the piece under the playhead has actually arrived —
+ * which is the hard half, and the half that is silently wrong if you write it yourself. librqbit
+ * also downloads sequentially by default, so the pieces arrive in the order a player wants them.
+ *
+ * Started read-only, so every route that changes anything is simply not mounted, and bound to
+ * 127.0.0.1 on a port the kernel picks. Other apps on the phone can reach localhost, so read-only
+ * is doing real work here: the most another app could do is read a file that is already on the
+ * device's own storage.
+ *
+ * Returns 0 if it could not start, which costs nothing — the app just does not offer Play.
+ */
+fn start_stream_server(session: Arc<Session>) -> u16 {
+    use librqbit::http_api::{HttpApi, HttpApiOptions};
+
+    let Ok(listener) = tauri::async_runtime::block_on(tokio::net::TcpListener::bind((
+        std::net::Ipv4Addr::LOCALHOST,
+        0,
+    ))) else {
+        return 0;
+    };
+    let Ok(addr) = listener.local_addr() else {
+        return 0;
+    };
+
+    let http = HttpApi::new(
+        // The second and third are a log-reload channel and a log broadcast. Neither is wanted:
+        // this server exists to hand bytes to a video player, not to stream logs to anyone.
+        librqbit::Api::new(session, None, None),
+        Some(HttpApiOptions {
+            read_only: true,
+            ..Default::default()
+        }),
+    );
     tauri::async_runtime::spawn(async move {
+        let _ = http.make_http_api_and_run(listener, None).await;
+    });
+    addr.port()
+}
+
+/* One loop, four jobs, because they all ask "what is happening right now" and four timers would
+ * wake the CPU four times to find out. On a phone that is the difference between a download that
+ * costs battery and one that costs noticeably more.
+ *
+ * In the app rather than in the window: a queue that only advances while the UI happens to be
+ * polling is a queue that stalls the moment somebody minimises the app. */
+fn supervise(session: Arc<Session>, app: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let mut ticks: u64 = 0;
         loop {
             tokio::time::sleep(RESTORE_TICK).await;
-            let engine = engine_state.state::<Engine>();
+            ticks += 1;
+            let engine = app.state::<Engine>();
 
-            /* Two jobs in one loop, because they ask the same question two seconds apart and a
-             * second timer would just wake the CPU twice for it. */
             service::set(downloading_summary(&session));
+            restore_priorities(&engine, &session).await;
+            enforce_queue(&engine, &session).await;
 
-            let pending: Vec<(usize, Vec<usize>)> = engine
-                .priority
-                .lock()
-                .iter()
-                .map(|(id, files)| (*id, files.clone()))
-                .collect();
-
-            for (id, files) in pending {
-                let Some(handle) = session.get(TorrentIdOrHash::Id(id)) else {
-                    engine.priority.lock().remove(&id);
-                    continue;
-                };
-                let stats = handle.stats();
-                let Ok(Ok(listed)) = handle.with_metadata(|m| file_list(&m.info)) else {
-                    continue;
-                };
-                let done = files.iter().all(|&i| {
-                    let have = stats.file_progress.get(i).copied().unwrap_or(0);
-                    listed.get(i).is_some_and(|(_, len)| have >= *len)
-                });
-                if !done {
-                    continue;
-                }
-                let full = engine.wanted.lock().get(&id).cloned();
-                if let Some(full) = full {
-                    let set: HashSet<usize> = full.into_iter().collect();
-                    let _ = session.update_only_files(&handle, &set).await;
-                }
-                engine.priority.lock().remove(&id);
+            if ticks % FEED_TICKS == 0 {
+                poll_feeds(&engine).await;
             }
         }
     });
+}
+
+/// Puts the rest of the files back once the prioritised ones have landed.
+async fn restore_priorities(engine: &Engine, session: &Arc<Session>) {
+    let pending: Vec<(usize, Vec<usize>)> = engine
+        .priority
+        .lock()
+        .iter()
+        .map(|(id, files)| (*id, files.clone()))
+        .collect();
+
+    for (id, files) in pending {
+        let Some(handle) = session.get(TorrentIdOrHash::Id(id)) else {
+            engine.priority.lock().remove(&id);
+            continue;
+        };
+        let stats = handle.stats();
+        let Ok(Ok(listed)) = handle.with_metadata(|m| file_list(&m.info)) else {
+            continue;
+        };
+        let done = files.iter().all(|&i| {
+            let have = stats.file_progress.get(i).copied().unwrap_or(0);
+            listed.get(i).is_some_and(|(_, len)| have >= *len)
+        });
+        if !done {
+            continue;
+        }
+        let full = engine.wanted.lock().get(&id).cloned();
+        if let Some(full) = full {
+            let set: HashSet<usize> = full.into_iter().collect();
+            let _ = session.update_only_files(&handle, &set).await;
+        }
+        engine.priority.lock().remove(&id);
+    }
+}
+
+/* The queue and the schedule, which are one decision: how many torrents may run right now.
+ *
+ * Outside the allowed hours that number is zero, otherwise it is max_active, otherwise there is
+ * no limit and this does nothing at all.
+ *
+ * `auto_paused` is what keeps this honest. A torrent the user paused by hand and a torrent the
+ * queue parked look identical to librqbit, so without a record of which ones this function
+ * stopped, the first time the queue advanced it would helpfully un-pause everything the user had
+ * deliberately stopped. Only what this paused is ever resumed by it.
+ */
+async fn enforce_queue(engine: &Engine, session: &Arc<Session>) {
+    let (limit, schedule) = {
+        let config = engine.config.lock();
+        (config.max_active, config.schedule)
+    };
+    let within = schedule.is_none_or(|s| s.allows(settings::minute_utc_now()));
+
+    // None means no limit at all. Outside the allowed hours the limit is zero, which is the same
+    // code path as a full queue and needs no special case.
+    let allowed: Option<usize> = match (within, limit) {
+        (false, _) => Some(0),
+        (true, 0) => None,
+        (true, n) => Some(n),
+    };
+
+    // Oldest first, so the queue is a queue rather than a lottery.
+    let mut ids: Vec<usize> = session.with_torrents(|iter| {
+        iter.filter(|(_, handle)| !handle.stats().finished)
+            .map(|(id, _)| id)
+            .collect()
+    });
+    ids.sort_unstable();
+
+    let mut running = 0usize;
+    for id in ids {
+        let Some(handle) = session.get(TorrentIdOrHash::Id(id)) else {
+            continue;
+        };
+        let parked = engine.auto_paused.lock().contains(&id);
+        let paused = handle.is_paused();
+
+        // A torrent the user paused stays paused, and takes no slot from the ones that want one.
+        if paused && !parked {
+            continue;
+        }
+
+        if allowed.is_none_or(|n| running < n) {
+            running += 1;
+            if parked {
+                let _ = session.unpause(&handle).await;
+                engine.auto_paused.lock().remove(&id);
+            }
+        } else if !paused {
+            let _ = session.pause(&handle).await;
+            engine.auto_paused.lock().insert(id);
+        }
+    }
+}
+
+/// Polls every feed and adds whatever is new. Failures are per-feed and silent: a feed that is
+/// down is a feed that has nothing new, and it will be asked again in fifteen minutes.
+async fn poll_feeds(engine: &Engine) {
+    let feeds = engine.config.lock().feeds.clone();
+    for feed in &feeds {
+        let Ok((fresh, guids)) = indexers::poll(feed).await else {
+            continue;
+        };
+        if fresh.is_empty() {
+            continue;
+        }
+        for hit in &fresh {
+            let _ = add_url(engine, &hit.url, &feed.label).await;
+        }
+        {
+            let mut config = engine.config.lock();
+            /* Found by URL rather than by the index it had when this loop started. Polling a
+             * feed takes seconds and the settings screen can save in the middle of it, which
+             * reorders the list — writing `seen` back by index would then attribute one feed's
+             * downloads to another and re-download the lot. */
+            let Some(stored) = config.feeds.iter_mut().find(|f| f.url == feed.url) else {
+                continue;
+            };
+            stored.seen.extend(guids);
+            /* Bounded, because `seen` is written to disk on every poll and a busy feed would
+             * otherwise grow it without limit. Two hundred is far more than any feed shows at
+             * once, so an item can never fall off the list while it is still being published. */
+            let overflow = stored.seen.len().saturating_sub(200);
+            stored.seen.drain(..overflow);
+        }
+        let _ = engine.save_config();
+    }
+}
+
+/// Adds a whole torrent from a magnet or .torrent URL, into the default folder, under a label.
+async fn add_url(engine: &Engine, url: &str, label: &str) -> anyhow::Result<usize> {
+    let folder = engine.downloads.to_string_lossy().to_string();
+    let response = engine
+        .session
+        .add_torrent(
+            AddTorrent::from_url(url),
+            Some(AddTorrentOptions {
+                output_folder: Some(folder.clone()),
+                overwrite: true,
+                ..Default::default()
+            }),
+        )
+        .await?;
+
+    let (id, handle) = match response {
+        AddTorrentResponse::Added(id, handle) | AddTorrentResponse::AlreadyManaged(id, handle) => {
+            (id, handle)
+        }
+        AddTorrentResponse::ListOnly(_) => anyhow::bail!("torrent was listed, not added"),
+    };
+
+    engine.folders.lock().insert(id, folder);
+    if !label.is_empty() {
+        engine
+            .config
+            .lock()
+            .labels
+            .insert(handle.info_hash().as_string(), label.to_string());
+        let _ = engine.save_config();
+    }
+    Ok(id)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -643,6 +975,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(service::plugin())
         .setup(|app| {
             let downloads = default_downloads(app);
             std::fs::create_dir_all(&downloads).ok();
@@ -662,6 +995,8 @@ pub fn run() {
             let session_dir = config_dir.join("session");
             std::fs::create_dir_all(&session_dir)?;
 
+            let config = settings::load(&config_dir);
+
             let session = tauri::async_runtime::block_on(Session::new_with_opts(
                 downloads.clone(),
                 SessionOptions {
@@ -673,11 +1008,19 @@ pub fn run() {
                         ..Default::default()
                     }),
                     enable_upnp_port_forwarding: true,
+                    /* Fixed for the life of the session, which is librqbit's design rather than
+                     * a shortcut here: the connector is built once and handed to every peer
+                     * connection. Changing the proxy therefore means restarting the app, and the
+                     * UI says so instead of pretending otherwise. */
+                    socks_proxy_url: Some(config.socks_proxy.clone())
+                        .filter(|url| !url.trim().is_empty()),
                     ..Default::default()
                 },
             ))?;
 
             rescue_stranded_downloads(app, &downloads);
+
+            let stream_port = start_stream_server(session.clone());
 
             app.manage(Engine {
                 session: session.clone(),
@@ -686,8 +1029,11 @@ pub fn run() {
                 folders: Mutex::new(HashMap::new()),
                 wanted: Mutex::new(HashMap::new()),
                 priority: Mutex::new(HashMap::new()),
+                config: Mutex::new(config),
+                auto_paused: Mutex::new(HashSet::new()),
+                stream_port,
             });
-            watch_priorities(session, app.handle().clone());
+            supervise(session, app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -701,8 +1047,59 @@ pub fn run() {
             resume,
             forget,
             default_folder,
-            open_download
+            open_download,
+            play,
+            get_settings,
+            set_settings,
+            search,
+            add_result,
+            set_label
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running flai");
+        .build(tauri::generate_context!())
+        .expect("error while running flai")
+        .run(handle_run_event);
+}
+
+/* Keeping the process alive on Android without losing the window.
+ *
+ * These two arms are one bug, from two directions. A foreground service holds the process open
+ * after the last activity dies — that is the whole point, it is what lets a download survive
+ * being swiped out of recents. Tauri then reopens the app into the same live process, and
+ * tauri-apps/tauri#15671 is what happens next: a blank white screen, no webview, JavaScript
+ * never runs, and only force-stopping it recovers. The activity comes back with a fresh
+ * hashCode, so Tauri's activity-to-window map never finds the window it stored, and the runtime
+ * drops the resume event because no webviews exist to deliver it to.
+ *
+ * Unfixed as of 2.11.5. Recreating the window from the same config `setup()` uses is the
+ * workaround the reporter validated, and it is a no-op in the normal case because a window is
+ * already there.
+ */
+fn handle_run_event(app: &tauri::AppHandle, event: tauri::RunEvent) {
+    let _ = app;
+    #[cfg(target_os = "android")]
+    match event {
+        // Closing the last window must not end the process while bytes are still moving.
+        tauri::RunEvent::ExitRequested { ref api, .. } => {
+            // try_state, not state: this can fire before setup() has managed the Engine, and
+            // state() panics where this simply has nothing to protect yet.
+            let busy = app
+                .try_state::<Engine>()
+                .is_some_and(|engine| downloading_summary(&engine.session).is_some());
+            if busy {
+                api.prevent_exit();
+            }
+        }
+        tauri::RunEvent::Resumed => {
+            if !app.webview_windows().is_empty() {
+                return;
+            }
+            for config in &app.config().app.windows {
+                let _ = tauri::WebviewWindowBuilder::from_config(app, config)
+                    .and_then(|builder| builder.build());
+            }
+        }
+        _ => {}
+    }
+    #[cfg(not(target_os = "android"))]
+    let _ = event;
 }

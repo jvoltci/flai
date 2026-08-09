@@ -50,6 +50,16 @@
     .flai-sub {
       display: none;
     }
+    /* The wordmark and three buttons do not fit 360px on one line. Wrapping puts the actions on
+       their own row rather than shrinking them below a thumb's worth of target. */
+    .flai-top {
+      flex-wrap: wrap;
+      row-gap: var(--space-2);
+    }
+    .flai-top-actions .n-btn {
+      min-block-size: 2.25rem;
+      padding-inline: var(--space-3);
+    }
     /* A finger is not a pointer: the small buttons in a download row are 24px targets on a
        desktop, which is under the 44px anyone can reliably hit. */
     .flai-item-actions .n-btn,
@@ -81,6 +91,24 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-3);
+    /* A hairline under the identity, so the header reads as chrome and the list below it reads
+       as content. On a light page the two are otherwise the same white and the app looks like
+       one undifferentiated sheet. */
+    padding-block-end: var(--space-3);
+    border-block-end: 1px solid var(--neutral-5);
+  }
+
+  .flai-top-actions {
+    margin-inline-start: auto;
+  }
+
+  /* A glyph, not a letter: it needs to sit on the optical centre of a square button rather than
+     on the text baseline the rest of the cluster shares. */
+  .flai-theme {
+    align-self: center;
+    min-inline-size: 2.25rem;
+    font-size: var(--text-1);
+    line-height: 1;
   }
 
   /* --text-4xl, not --text-display. The web page gives the wordmark the whole viewport; here
@@ -466,5 +494,104 @@
   .flai-saved-flash {
     font-size: var(--text-00);
     color: var(--ok-11);
+  }
+  .flai-warn {
+    color: var(--warn-11);
+  }
+
+  /* A checkbox and its words are one target, and the words are the bigger half of it. */
+  .flai-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+  }
+
+  /* Fields wrap rather than squeeze: four inputs on one line is a phone showing four slivers. */
+  .flai-setting-row {
+    flex-wrap: wrap;
+  }
+  .flai-setting-row .n-input {
+    flex: 1 1 8rem;
+    min-inline-size: 0;
+  }
+  .flai-setting-row .flai-setting-path {
+    flex: 3 1 16rem;
+  }
+}
+
+/* ── search results, labels and the queued state ──────────────────────────── */
+@layer nilam.utilities {
+  .flai-hits {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 26rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .flai-hit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'title action' 'meta action';
+    align-items: center;
+    column-gap: var(--space-3);
+    padding: var(--space-2) var(--space-1);
+    border-block-end: 1px solid var(--neutral-4);
+  }
+  .flai-hit:last-child {
+    border-block-end: 0;
+  }
+  .flai-hit-title {
+    grid-area: title;
+    font-size: var(--text-0);
+    overflow-wrap: anywhere;
+  }
+  .flai-hit-meta {
+    grid-area: meta;
+    font-size: var(--text-000);
+    color: var(--neutral-11);
+    font-variant-numeric: tabular-nums;
+  }
+  .flai-hit > .n-btn {
+    grid-area: action;
+  }
+
+  /* Seeders is the number that predicts whether a download finishes, so it gets the one colour
+     in the row — and zero gets the warning colour rather than silence, because a result with no
+     seeders looks identical to a good one until you have waited an hour on it. */
+  .flai-seeders {
+    color: var(--ok-11);
+    font-weight: var(--weight-medium);
+  }
+  .flai-seeders[data-dead] {
+    color: var(--danger-11);
+  }
+
+  /* The label reads as a tag, not as more of the title: brand tint, small, and it never grows
+     enough to push the percentage off the line. */
+  .flai-label {
+    flex: none;
+    max-inline-size: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 var(--space-2);
+    border-radius: var(--r-full);
+    background: var(--brand-3);
+    color: var(--brand-11);
+    font-size: var(--text-000);
+    line-height: 1.6;
+  }
+
+  .flai-queued {
+    color: var(--warn-11);
+  }
+
+  .flai-detail-actions {
+    grid-area: action;
+    justify-content: flex-end;
   }
 }

@@ -3,6 +3,17 @@ import { bridge, formatBytes, type FileProgress, type TorrentRow } from './bridg
 
 const POLL_MS = 1200;
 
+/* Which files are worth offering a Play button for.
+ *
+ * By extension rather than by asking the system, because the file may not exist yet — that is
+ * the whole point of streaming it. The list is what torrents actually ship; anything else gets
+ * no button rather than a button that opens a chooser with nothing in it. */
+const PLAYABLE = /\.(mkv|mp4|avi|mov|m4v|webm|ts|mpg|mpeg|wmv|flv)$/i;
+
+function playable(name: string): boolean {
+  return PLAYABLE.test(name);
+}
+
 /* The verbose view, and the reason the row above it can stay quiet.
  *
  * A torrent client has two audiences at once: someone glancing at whether it is done, and
@@ -114,23 +125,40 @@ export function Details({ row }: { row: TorrentRow }) {
               <span className="flai-detail-size">
                 {done ? formatBytes(file.length) : `${formatBytes(file.done)} / ${formatBytes(file.length)}`}
               </span>
-              {file.selected && !done ? (
-                <button
-                  type="button"
-                  className={file.first ? 'n-btn n-btn-sm n-btn-fill' : 'n-btn n-btn-sm'}
-                  onClick={() => void first(file.index, !file.first)}
-                  title={
-                    file.first
-                      ? 'Stop fetching this one ahead of the others'
-                      : 'Get this one first. The rest pause, and the torrent as a whole gets ' +
-                        'slower — worth it when you want one episode now.'
-                  }
-                >
-                  First
-                </button>
-              ) : (
-                <span className="flai-detail-state">{done ? '✓' : 'skipped'}</span>
-              )}
+              <span className="n-cluster flai-detail-actions">
+                {/* Playable the moment there is a first piece, not when the file is finished:
+                    librqbit downloads sequentially and its stream route waits for the piece
+                    under the playhead, so a video opens now and keeps up with itself. */}
+                {playable(file.name) && file.selected && (
+                  <button
+                    type="button"
+                    className="n-btn n-btn-sm"
+                    onClick={() =>
+                      void bridge.play(row.id, file.index).catch((err) => setError(String(err)))
+                    }
+                    title={done ? 'Play it' : 'Play it now, while the rest downloads'}
+                  >
+                    Play
+                  </button>
+                )}
+                {file.selected && !done ? (
+                  <button
+                    type="button"
+                    className={file.first ? 'n-btn n-btn-sm n-btn-fill' : 'n-btn n-btn-sm'}
+                    onClick={() => void first(file.index, !file.first)}
+                    title={
+                      file.first
+                        ? 'Stop fetching this one ahead of the others'
+                        : 'Get this one first. The rest pause, and the torrent as a whole gets ' +
+                          'slower — worth it when you want one episode now.'
+                    }
+                  >
+                    First
+                  </button>
+                ) : (
+                  <span className="flai-detail-state">{done ? '✓' : 'skipped'}</span>
+                )}
+              </span>
             </li>
           );
         })}
