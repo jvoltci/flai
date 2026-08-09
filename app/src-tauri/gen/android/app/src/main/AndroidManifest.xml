@@ -15,6 +15,19 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- All files access, so downloads land in the real Downloads folder.
+         The alternatives do not work for this app. MediaStore and the Storage Access Framework
+         both hand out content:// URIs, and librqbit writes filesystem paths — adapting it means
+         a custom storage backend in Rust. The app-specific folder needs no permission, but on
+         Android 11+ Google hid Android/data from the Files app, so a finished download is there
+         and unreachable, which is exactly the bug this replaces.
+         Play Store restricts this permission; flai is sideloaded, so it does not apply. Every
+         serious Android torrent client asks for the same thing. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <!-- Pre-Android-11 devices, where all-files access does not exist yet. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 

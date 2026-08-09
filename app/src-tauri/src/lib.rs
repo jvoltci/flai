@@ -479,21 +479,48 @@ fn open_download(path: String) -> Result<(), String> {
     service::open(&path).map_err(err)
 }
 
-/// Where downloads go. The OS download folder, on every platform.
+/// Where downloads go: the real Downloads folder, the one every other app uses.
 ///
-/// Android had a special case here and it was the worst bug in this app: it wrote to
-/// app_data_dir, which is /data/user/0/<pkg> — a directory no file manager can open without
-/// root. Downloads completed perfectly and were then unreachable. Ten gigabytes went in before
-/// anyone found out.
+/// This had a special case that wrote to app_data_dir — /data/user/0/<pkg>, which needs root to
+/// open. Downloads finished and were invisible. The obvious repair was the app-specific external
+/// folder, and it is only half a repair: it needs no permission, but Android 11+ hides
+/// Android/data from the Files app, so the download is still somewhere its owner cannot reach.
 ///
-/// Tauri's download_dir() resolves through its own path plugin on Android, to a folder that is
-/// both writable without any storage permission and visible in a file manager. It needed no JNI
-/// and no special case; the special case was the whole problem.
+/// The only way a path-writing torrent engine reaches /storage/emulated/0/Download is all-files
+/// access. MediaStore and the Storage Access Framework both answer in content:// URIs, and
+/// librqbit writes paths. LibreTorrent declares the same permission for the same reason.
+///
+/// If it is refused, this falls back to the app folder — worse to find, but still working.
 fn default_downloads(app: &tauri::App) -> PathBuf {
+    #[cfg(target_os = "android")]
+    {
+        // Not a guess: /storage/emulated/0/Download is the public Downloads folder on every
+        // Android device for the primary user. Probed rather than assumed, so a device that
+        // does things differently, or a refused permission, falls through instead of failing.
+        let public = PathBuf::from("/storage/emulated/0/Download/flai");
+        if std::fs::create_dir_all(&public).is_ok() {
+            if is_writable(&public) {
+                return public;
+            }
+            // Measured: without all-files access, Android lets the directory be created and
+            // then refuses the write. Take the empty folder back out rather than leaving a
+            // stray flai/ in everyone's Downloads.
+            std::fs::remove_dir(&public).ok();
+        }
+    }
     app.path()
         .download_dir()
         .or_else(|_| app.path().app_data_dir().map(|d| d.join("downloads")))
         .unwrap_or_else(|_| PathBuf::from("."))
+}
+
+/// create_dir_all can succeed on a path that is still not writable, so this actually writes.
+#[allow(dead_code)]
+fn is_writable(dir: &std::path::Path) -> bool {
+    let probe = dir.join(".flai-write-test");
+    let ok = std::fs::write(&probe, b"x").is_ok();
+    std::fs::remove_file(&probe).ok();
+    ok
 }
 
 /// Moves anything stranded in the old, unreachable location into the new one.
