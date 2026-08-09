@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { open } from '@tauri-apps/plugin-dialog';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { Details } from './Details';
-import { Settings } from './Settings';
 import {
   bridge,
   formatBytes,
@@ -35,13 +33,12 @@ export function App() {
   const [folder, setFolder] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<TorrentRow[]>([]);
-  const [settings, setSettings] = useState(false);
   /** Which rows are expanded. Ids, so the set survives the list reordering under it. */
   const [open_, setOpen] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    void bridge.getConfig().then((c) => setFolder(c.folder));
-  }, [settings]);
+    void bridge.defaultFolder().then(setFolder);
+  }, []);
 
   /* Polling, not events. The list is at most a handful of rows and the call is an in-process
    * function behind an IPC hop — cheaper than the machinery to push, and it cannot get stuck
@@ -87,11 +84,6 @@ export function App() {
     []
   );
 
-  const chooseFolder = useCallback(async () => {
-    const chosen = await open({ directory: true, defaultPath: folder || undefined });
-    if (typeof chosen === 'string') setFolder(chosen);
-  }, [folder]);
-
   const download = useCallback(async () => {
     if (!info) return;
     setError(null);
@@ -125,17 +117,7 @@ export function App() {
       <header className="flai-top">
         <Wordmark />
         <span className="flai-sub">saves straight to your disk</span>
-        <button
-          type="button"
-          className="n-btn n-btn-sm flai-gear"
-          onClick={() => setSettings((on) => !on)}
-          aria-pressed={settings}
-        >
-          Settings
-        </button>
       </header>
-
-      {settings && <Settings onClose={() => setSettings(false)} />}
 
       <form
         className="flai-command"
@@ -182,9 +164,6 @@ export function App() {
               </p>
             </div>
             <div className="n-cluster">
-              <button type="button" className="n-btn n-btn-sm" onClick={() => void chooseFolder()}>
-                Folder…
-              </button>
               <button type="button" className="n-btn n-btn-fill" onClick={() => void download()}>
                 Download {picked.size === 0 ? 'all' : `${picked.size}`} ·{' '}
                 {formatBytes(chosenBytes)}

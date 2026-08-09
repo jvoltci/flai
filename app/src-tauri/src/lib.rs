@@ -7,7 +7,6 @@
  * Here there is a disk. So: every file at once, no window, no reader lock, no password, and the
  * session is persisted so closing the app and opening it tomorrow picks up where it left off.
  */
-mod config;
 mod service;
 
 use std::collections::{HashMap, HashSet};
@@ -25,7 +24,6 @@ use parking_lot::Mutex;
 use serde::Serialize;
 use tauri::Manager;
 
-use config::Config;
 
 /// How often the background task checks whether a prioritised set has finished.
 const RESTORE_TICK: Duration = Duration::from_secs(2);
@@ -53,7 +51,6 @@ struct Engine {
     session: Arc<Session>,
     downloads: PathBuf,
     config_dir: PathBuf,
-    config: Mutex<Config>,
     /* Three things librqbit does not keep for us.
      *
      * `folders` — where each download was told to go. It lives on ManagedTorrentOptions, which
@@ -75,28 +72,9 @@ impl Engine {
             .lock()
             .get(&id)
             .cloned()
-            .unwrap_or_else(|| self.target_folder())
+            .unwrap_or_else(|| self.downloads.to_string_lossy().to_string())
     }
 
-    /// Where new downloads go: the configured folder, or the OS Downloads folder.
-    fn target_folder(&self) -> String {
-        let configured = self.config.lock().folder.clone();
-        if configured.is_empty() {
-            self.downloads.to_string_lossy().to_string()
-        } else {
-            configured
-        }
-    }
-
-    fn apply_limits(&self) {
-        let cfg = self.config.lock().clone();
-        self.session
-            .ratelimits
-            .set_download_bps(Config::bps(cfg.download_kbps));
-        self.session
-            .ratelimits
-            .set_upload_bps(Config::bps(cfg.upload_kbps));
-    }
 }
 
 #[derive(Serialize)]
@@ -254,7 +232,7 @@ async fn start(
 ) -> Result<usize, String> {
     let chosen = folder
         .filter(|f| !f.is_empty())
-        .unwrap_or_else(|| engine.target_folder());
+        .unwrap_or_else(|| engine.downloads.to_string_lossy().to_string());
 
     let response = engine
         .session
@@ -484,32 +462,6 @@ async fn forget(
     Ok(())
 }
 
-#[tauri::command]
-fn get_config(engine: tauri::State<'_, Engine>) -> Config {
-    let mut cfg = engine.config.lock().clone();
-    // An empty folder means "wherever the app decided"; show that rather than a blank box.
-    if cfg.folder.is_empty() {
-        cfg.folder = engine.downloads.to_string_lossy().to_string();
-    }
-    cfg
-}
-
-#[tauri::command]
-fn set_config(engine: tauri::State<'_, Engine>, config: Config) -> Result<Config, String> {
-    *engine.config.lock() = config;
-    engine.apply_limits();
-    engine.config.lock().save(&engine.config_dir).map_err(err)?;
-    Ok(get_config(engine))
-}
-
-#[tauri::command]
-fn reset_config(engine: tauri::State<'_, Engine>) -> Result<Config, String> {
-    *engine.config.lock() = Config::default();
-    engine.apply_limits();
-    engine.config.lock().save(&engine.config_dir).map_err(err)?;
-    Ok(get_config(engine))
-}
-
 /* Hands a finished download to another app.
  *
  * flai has no video player and is not getting one. What people actually download is HEVC with
@@ -518,38 +470,60 @@ fn reset_config(engine: tauri::State<'_, Engine>) -> Result<Config, String> {
  * device's hardware supports, and subtitles for free: a torrent ships Movie.mkv beside
  * Movie.en.srt, and every serious player picks up a matching .srt by itself. */
 #[tauri::command]
+fn default_folder(engine: tauri::State<'_, Engine>) -> String {
+    engine.downloads.to_string_lossy().to_string()
+}
+
+#[tauri::command]
 fn open_download(path: String) -> Result<(), String> {
     service::open(&path).map_err(err)
 }
 
-/// Where downloads go unless the user says otherwise.
+/// Where downloads go. The OS download folder, on every platform.
 ///
-/// On a desktop that is the OS Downloads folder itself, not a subfolder of it: a multi-file
-/// torrent already brings its own name, and burying that inside a folder called "flai" names
-/// the download after the program instead of after the thing.
+/// Android had a special case here and it was the worst bug in this app: it wrote to
+/// app_data_dir, which is /data/user/0/<pkg> — a directory no file manager can open without
+/// root. Downloads completed perfectly and were then unreachable. Ten gigabytes went in before
+/// anyone found out.
 ///
-/// On Android there is no such choice. Scoped storage means an app may only write freely inside
-/// its own external files directory, and reaching anywhere else needs the Storage Access
-/// Framework, which hands out content:// URIs rather than paths — and librqbit writes to paths.
-/// So Android gets the app directory, which file managers can still browse, and the UI says so
-/// rather than pretending otherwise.
+/// Tauri's download_dir() resolves through its own path plugin on Android, to a folder that is
+/// both writable without any storage permission and visible in a file manager. It needed no JNI
+/// and no special case; the special case was the whole problem.
 fn default_downloads(app: &tauri::App) -> PathBuf {
-    #[cfg(target_os = "android")]
-    {
-        // getExternalFilesDir, not app_data_dir. Both are writable without any permission, but
-        // app_data_dir is /data/user/0/<pkg>, which no file manager can open without root — a
-        // download that lands somewhere the user cannot reach has not really finished.
-        return service::downloads_dir()
-            .or_else(|| app.path().app_data_dir().ok().map(|d| d.join("downloads")))
-            .unwrap_or_else(|| PathBuf::from("/data/local/tmp"));
+    app.path()
+        .download_dir()
+        .or_else(|_| app.path().app_data_dir().map(|d| d.join("downloads")))
+        .unwrap_or_else(|_| PathBuf::from("."))
+}
+
+/// Moves anything stranded in the old, unreachable location into the new one.
+///
+/// Runs once at startup and is a no-op after that. Rescuing a finished download beats
+/// apologising for it.
+fn rescue_stranded_downloads(app: &tauri::App, target: &std::path::Path) {
+    let Ok(old) = app.path().app_data_dir().map(|d| d.join("downloads")) else {
+        return;
+    };
+    if !old.exists() || old == target {
+        return;
     }
-    #[cfg(not(target_os = "android"))]
-    {
-        app.path()
-            .download_dir()
-            .or_else(|_| app.path().app_data_dir().map(|d| d.join("downloads")))
-            .unwrap_or_else(|_| PathBuf::from("."))
+    let Ok(entries) = std::fs::read_dir(&old) else { return };
+    let mut moved = 0usize;
+    for entry in entries.flatten() {
+        let to = target.join(entry.file_name());
+        if to.exists() {
+            continue;
+        }
+        // Rename first: same filesystem, so it is instant and does not need twice the space.
+        // A 10 GB copy on a phone is not a fallback anyone wants by surprise.
+        if std::fs::rename(entry.path(), &to).is_ok() {
+            moved += 1;
+        }
     }
+    if moved > 0 {
+        eprintln!("flai: moved {moved} stranded download(s) into {}", target.display());
+    }
+    std::fs::remove_dir(&old).ok();
 }
 
 /* What the notification says, or None when nothing is running.
@@ -646,7 +620,6 @@ pub fn run() {
             let downloads = default_downloads(app);
             std::fs::create_dir_all(&downloads).ok();
             let config_dir = app.path().app_config_dir()?;
-            let cfg = Config::load(&config_dir);
 
             /* Persisted, which is the whole difference between this and the web app. A
              * download interrupted by closing the app — or by a reboot — is still there next
@@ -677,16 +650,16 @@ pub fn run() {
                 },
             ))?;
 
+            rescue_stranded_downloads(app, &downloads);
+
             app.manage(Engine {
                 session: session.clone(),
                 downloads,
                 config_dir,
-                config: Mutex::new(cfg),
                 folders: Mutex::new(HashMap::new()),
                 wanted: Mutex::new(HashMap::new()),
                 priority: Mutex::new(HashMap::new()),
             });
-            app.state::<Engine>().apply_limits();
             watch_priorities(session, app.handle().clone());
             Ok(())
         })
@@ -700,9 +673,7 @@ pub fn run() {
             pause,
             resume,
             forget,
-            get_config,
-            set_config,
-            reset_config,
+            default_folder,
             open_download
         ])
         .run(tauri::generate_context!())

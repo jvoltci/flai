@@ -49,12 +49,6 @@ export interface TorrentRow {
   fileCount: number;
 }
 
-export interface Config {
-  folder: string;
-  downloadKbps: number;
-  uploadKbps: number;
-}
-
 /* The whole backend. No HTTP, no token — the torrent engine is in this process, so there is
  * nothing to authenticate to and nothing to keep warm. */
 export const bridge = {
@@ -71,9 +65,7 @@ export const bridge = {
   /* Android only. Desktops use the opener plugin from the UI, which already knows how to
    * reveal a folder in Finder or Explorer. */
   openDownload: (path: string) => invoke<void>('open_download', { path }),
-  getConfig: () => invoke<Config>('get_config'),
-  setConfig: (config: Config) => invoke<Config>('set_config', { config }),
-  resetConfig: () => invoke<Config>('reset_config'),
+  defaultFolder: () => invoke<string>('default_folder'),
 };
 
 export function formatBytes(n: number): string {
