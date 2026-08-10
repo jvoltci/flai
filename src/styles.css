@@ -103,6 +103,14 @@
   /* Replaces Bootstrap's `py-3`. nilam has no spacing utilities on purpose. */
   .footer-copyright { padding-block: var(--space-4); }
 
+  /* Separates the copyright from the second link. --neutral-8 rather than the footer's
+     own --neutral-11 so the dot reads as punctuation and not as a third word; it is
+     aria-hidden for the same reason, a screen reader gains nothing from it. */
+  .footer-sep {
+    margin-inline: var(--space-2);
+    color: var(--neutral-8);
+  }
+
   /* ── depth ────────────────────────────────────────────────────────────────
    *
    * A brand-tinted wash falling from the top edge, over the photograph and under everything

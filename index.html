@@ -50,6 +50,14 @@
       <div class="footer-copyright">
         ©<script>document.write(new Date().getFullYear());</script><span>&nbsp;Copyright:</span>
         <a class="n-link" target="_blank" rel="noopener noreferrer" href="https://jvoltci.github.io/">Vehement</a>
+        <!-- The proxy. In the footer rather than beside "Get the app", because that line is
+             answering a question someone is actually asking at the password field; this one
+             is a different tool and should never compete with the task in hand.
+
+             `rel="noopener"` matters more here than on the copyright link: the target is an
+             origin every proxied site shares, so it must not get a handle on this window. -->
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a class="n-link" target="_blank" rel="noopener noreferrer" href="https://elsewhere.altrusian.com">elsewhere</a>
       </div>
     </footer>
     <script type="module" src="/src/main.tsx"></script>
