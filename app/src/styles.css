@@ -6,6 +6,11 @@
  *
  * Order matters: tokens -> scale -> base -> components. */
 @import 'nilam/tokens.css';
+/* The Altrusian theme (src/theme, copied whole from one/altrusian/design): the same
+ * token names solved from #1634C2, appended to nilam.tokens so they win; Inter. */
+@import '@fontsource-variable/inter/wght.css';
+@import './theme/altrusian.tokens.css';
+@import './theme/altrusian.css';
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
 @import 'nilam/components.css';
@@ -33,7 +38,7 @@
     margin: 0 auto;
 
     /* max(), not a plain inset. On Android the activity is edge-to-edge, so without this the
-       header draws under the status bar — the wordmark lands on the clock and Settings lands
+       header draws under the status bar, the wordmark lands on the clock and Settings lands
        on the wifi icon. max() keeps the desktop's own padding on a window that has no insets,
        and clears the status bar and the gesture pill where there are. */
     padding-block-start: max(var(--space-5), env(safe-area-inset-top));
@@ -45,7 +50,7 @@
   /* ── phone ─────────────────────────────────────────────────────────────── */
   @media (width < 34rem) {
     /* The header is a wordmark, a tagline and a button on one line. That fits a window and
-       crowds a phone, so the tagline goes — the empty state below says the same thing in a
+       crowds a phone, so the tagline goes, the empty state below says the same thing in a
        full sentence, and saying it twice on a 6-inch screen is worse than not saying it. */
     .flai-sub {
       display: none;
@@ -423,8 +428,8 @@
     gap: var(--space-3);
     padding: var(--space-1) 0;
   }
-  /* A file the torrent is not fetching is still worth showing — knowing what you skipped is
-     half of why you opened this — but it should not read as active. */
+  /* A file the torrent is not fetching is still worth showing, knowing what you skipped is
+     half of why you opened this, but it should not read as active. */
   .flai-detail-file[data-off] {
     opacity: 0.45;
   }
@@ -560,7 +565,7 @@
   }
 
   /* Seeders is the number that predicts whether a download finishes, so it gets the one colour
-     in the row — and zero gets the warning colour rather than silence, because a result with no
+     in the row, and zero gets the warning colour rather than silence, because a result with no
      seeders looks identical to a good one until you have waited an hour on it. */
   .flai-seeders {
     color: var(--ok-11);

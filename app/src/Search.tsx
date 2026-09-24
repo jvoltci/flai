@@ -3,7 +3,7 @@ import { bridge, formatBytes, type Hit } from './bridge';
 
 /* Search asks your indexers, and flai ships knowing about none.
  *
- * Every result here comes from a Torznab endpoint the user added themselves — the same protocol
+ * Every result here comes from a Torznab endpoint the user added themselves, the same protocol
  * Prowlarr, Jackett, Sonarr and Radarr speak. That is not a limitation dressed up as a principle:
  * a client with a built-in list of sites is a client that goes stale in a month and gets pulled
  * from stores, and the people who actually run this already have Prowlarr.

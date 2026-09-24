@@ -90,7 +90,7 @@ export interface Settings {
   labels: Record<string, string>;
 }
 
-/* The whole backend. No HTTP, no token — the torrent engine is in this process, so there is
+/* The whole backend. No HTTP, no token, the torrent engine is in this process, so there is
  * nothing to authenticate to and nothing to keep warm. */
 export const bridge = {
   inspect: (magnet: string) => invoke<TorrentInfo>('inspect', { magnet }),
@@ -122,7 +122,7 @@ export const bridge = {
 /* Day or night, and day unless told otherwise.
  *
  * nilam does the whole job through `color-scheme` and `light-dark()`, so switching themes is one
- * class on <html> and every token follows — there is no second palette to keep in step. Leaving
+ * class on <html> and every token follows, there is no second palette to keep in step. Leaving
  * the class off would follow the OS, which is the usual default and the wrong one here: the ask
  * was for day by default, and a phone in dark mode would otherwise never show it.
  */
@@ -172,7 +172,7 @@ export function formatBytes(n: number): string {
 }
 
 export function formatEta(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds)) return '—';
+  if (seconds === null || !Number.isFinite(seconds)) return '·';
   if (seconds < 60) return `${Math.round(seconds)}s`;
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
   const hours = Math.floor(seconds / 3600);

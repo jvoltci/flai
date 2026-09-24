@@ -90,7 +90,7 @@ export const Player = ({ api, meta, file, onClose }: PlayerProps) => {
           preload="metadata"
           src={streamUrl}
           // The bridge serves at most 16 MB per request, so seeking works but a jump backwards
-          // past the sliding window makes the server restart the torrent — a stall, not a
+          // past the sliding window makes the server restart the torrent, a stall, not a
           // failure. Worth knowing before it looks like a bug.
         >
           Your browser does not support the video element.
@@ -135,7 +135,7 @@ export const Player = ({ api, meta, file, onClose }: PlayerProps) => {
           Copy stream URL
         </button>
         <p className="n-hint">
-          The playlist is a two-line .m3u — opening it hands this exact URL to your desktop
+          The playlist is a two-line .m3u, opening it hands this exact URL to your desktop
           player, which decodes anything Chrome will not. The URL carries your session token, so
           it stops working when the token expires.
         </p>

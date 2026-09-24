@@ -13,11 +13,11 @@ import {
 /* Only what nobody can guess for you.
  *
  * The Settings screen this replaces asked where downloads go and how fast they may run, and got
- * deleted for it — there is one right answer to the first and the second only makes things worse.
+ * deleted for it, there is one right answer to the first and the second only makes things worse.
  * Everything here is a fact the app cannot know: your proxy, your indexer, your feed, your hours.
  *
- * Every field carries an ⓘ. These are not obvious settings — "Torznab endpoint" means nothing
- * unless you already run Prowlarr — and a setting nobody understands is a setting nobody uses.
+ * Every field carries an ⓘ. These are not obvious settings, "Torznab endpoint" means nothing
+ * unless you already run Prowlarr, and a setting nobody understands is a setting nobody uses.
  * The help stays folded away so it costs nothing once you do know.
  */
 
@@ -27,7 +27,7 @@ const BLANK_FEED: Feed = { name: '', url: '', label: '', contains: '', seen: [] 
 /* A label, an ⓘ, and the control.
  *
  * The help answers the four questions somebody actually has, in the order they have them: what
- * is this, how do I use it, show me one, and what will bite me. The last one is not padding —
+ * is this, how do I use it, show me one, and what will bite me. The last one is not padding,
  * every setting here has a way of looking like it worked when it did not, and that is exactly
  * what a normal user cannot diagnose.
  */
@@ -129,7 +129,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
         <div className="n-cluster">
           {saved === 'yes' && <span className="flai-saved-flash">Saved</span>}
           {saved === 'restart' && (
-            <span className="flai-saved-flash flai-warn">Saved — restart for the proxy</span>
+            <span className="flai-saved-flash flai-warn">Saved, restart for the proxy</span>
           )}
           <button type="button" className="n-btn n-btn-fill n-btn-sm" onClick={() => void save()}>
             Save

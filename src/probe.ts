@@ -2,7 +2,7 @@
  *
  * v3 marked a file `streamable` from its extension alone, handed .mkv to a <video> element,
  * and showed an empty player when Chrome refused it. That is the "playback fails on some
- * files" bug, and the fix is not a transcoder — it is telling the truth.
+ * files" bug, and the fix is not a transcoder, it is telling the truth.
  *
  * Two signals, cheap first:
  *
@@ -12,7 +12,7 @@
  *      "H.265 video, AC-3 audio" instead of "unsupported". That turns a dead end into a
  *      decision: VLC plays this fine over the same URL.
  *
- * No WASM remuxer. It would rescue exactly one case — H.264 in MKV — at the cost of a 2-3 MB
+ * No WASM remuxer. It would rescue exactly one case, H.264 in MKV, at the cost of a 2-3 MB
  * payload, a worker, and a MediaSource pipeline to maintain, and it still could not help
  * H.265 or DTS. The external-player handoff covers every case for the price of a button.
  */
@@ -112,7 +112,7 @@ export async function probeFile(url: string, contentType: string): Promise<Verdi
         playability: 'unknown',
         container: 'unknown',
         codecs: [],
-        reason: 'the bridge is busy with a download on this torrent — pause it to inspect this file',
+        reason: 'the bridge is busy with a download on this torrent, pause it to inspect this file',
       };
     }
   } catch {
@@ -161,7 +161,7 @@ export async function probeFile(url: string, contentType: string): Promise<Verdi
   };
 }
 
-/** A one-line playlist. Opening it hands the stream to whatever plays .m3u — VLC, mpv, IINA —
+/** A one-line playlist. Opening it hands the stream to whatever plays .m3u, VLC, mpv, IINA,
  *  which beats asking someone to copy a URL into a dialog. */
 export function playlistBlobUrl(streamUrl: string, name: string): string {
   const body = `#EXTM3U\n#EXTINF:-1,${name}\n${streamUrl}\n`;

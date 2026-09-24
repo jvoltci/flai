@@ -5,7 +5,7 @@ const POLL_MS = 1200;
 
 /* Which files are worth offering a Play button for.
  *
- * By extension rather than by asking the system, because the file may not exist yet — that is
+ * By extension rather than by asking the system, because the file may not exist yet, that is
  * the whole point of streaming it. The list is what torrents actually ship; anything else gets
  * no button rather than a button that opens a chooser with nothing in it. */
 const PLAYABLE = /\.(mkv|mp4|avi|mov|m4v|webm|ts|mpg|mpeg|wmv|flv)$/i;
@@ -18,7 +18,7 @@ function playable(name: string): boolean {
  *
  * A torrent client has two audiences at once: someone glancing at whether it is done, and
  * someone working out why it is not. Putting both in one row serves neither. So the row is the
- * glance, and this is everything else — every file with its own progress, and the peer counts
+ * glance, and this is everything else, every file with its own progress, and the peer counts
  * behind the single number "12 peers", which hides that 200 others were tried and failed. */
 export function Details({ row }: { row: TorrentRow }) {
   const [files, setFiles] = useState<FileProgress[] | null>(null);
@@ -93,7 +93,7 @@ export function Details({ row }: { row: TorrentRow }) {
 
       {row.priorityCount > 0 && (
         <p className="flai-first-note">
-          Fetching {row.priorityCount} file{row.priorityCount === 1 ? '' : 's'} first — the rest
+          Fetching {row.priorityCount} file{row.priorityCount === 1 ? '' : 's'} first, the rest
           are paused, and the torrent is slower overall while this lasts. It goes back on its own
           when they finish.{' '}
           <button
@@ -150,7 +150,7 @@ export function Details({ row }: { row: TorrentRow }) {
                       file.first
                         ? 'Stop fetching this one ahead of the others'
                         : 'Get this one first. The rest pause, and the torrent as a whole gets ' +
-                          'slower — worth it when you want one episode now.'
+                          'slower, worth it when you want one episode now.'
                     }
                   >
                     First

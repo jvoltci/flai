@@ -4,12 +4,12 @@ import { Player } from './Player';
 import { formatBytes } from './format';
 import { useWishlist, savedAgo } from './wishlist';
 
-/* A box we own. There is no longer a hosted fallback — Render is gone.
+/* A box we own. There is no longer a hosted fallback, Render is gone.
  *
  * The visible difference is the wait: the free tier slept after 15 idle minutes and took about
  * a minute to wake, which is the entire reason the "Waking the bridge" spinner exists. This is
  * always on. It also has a disk, no monthly egress cap, and can accept inbound peer
- * connections — the last of which is the real speed ceiling, since a host that can only dial
+ * connections, the last of which is the real speed ceiling, since a host that can only dial
  * out finds hundreds of peers and connects to a dozen.
  *
  * VITE_API_URL still overrides this, for pointing a dev build at localhost. */
@@ -32,7 +32,7 @@ function kindOf(file: FileEntry): { label: string; glyph: string | null; brand: 
 }
 
 /* Metadata means finding peers, so there is no proportion to report and .n-progress would be a
- * lie — but the shape that arrives is always a title and a table of rows, and nilam's loader
+ * lie, but the shape that arrives is always a title and a table of rows, and nilam's loader
  * table says prefer the skeleton wherever the shape is predictable.
  *
  * aria-hidden throughout: the .n-loading next to the field is the live region, and two
@@ -159,8 +159,8 @@ export function App() {
   /* Ask, then hand the URL over.
    *
    * This used to be a plain <a download>, which meant the browser's download manager owned the
-   * outcome and the page never heard about it. A refusal — another file from the same torrent
-   * still downloading — arrived as a 120-byte JSON file saved under the name of the episode you
+   * outcome and the page never heard about it. A refusal, another file from the same torrent
+   * still downloading, arrived as a 120-byte JSON file saved under the name of the episode you
    * wanted. One probe request first, and the refusal lands on the page instead. */
   const onSave = useCallback(
     async (file: FileEntry) => {
@@ -250,7 +250,7 @@ export function App() {
             )}
             {signingIn && (
               /* Just "Signing in" now. This used to promise a minute's wait, because Render's
-                 free tier slept after 15 idle minutes and there was no keep-warm ping — one
+                 free tier slept after 15 idle minutes and there was no keep-warm ping, one
                  cost 730 of the 750 free hours a month. The bridge now runs on a box that
                  never sleeps, so the old copy would be a lie that makes a fast thing feel
                  slow. */
@@ -305,13 +305,13 @@ export function App() {
               /* The page's one genuinely long wait, so it gets the larger ring and the
                  elapsed-time behaviour nilam 0.7 builds in: quiet under 1.2s so a fast answer
                  does not flash, and a slow breath after 10s that says it has not hung.
-                 .n-slow is a child that reveals itself at 10s with no JavaScript — which is
+                 .n-slow is a child that reveals itself at 10s with no JavaScript, which is
                  exactly when someone starts wondering whether this is broken. */
               <p className="n-loading flai-centred" role="status">
                 <span className="n-spinner n-spinner-lg" />
                 Asking the swarm
                 <span className="n-slow">
-                  — a cold torrent spends its first minute finding peers
+, a cold torrent spends its first minute finding peers
                 </span>
               </p>
             ) : (
@@ -333,7 +333,7 @@ export function App() {
             <a href={APP_RELEASES} target="_blank" rel="noreferrer">
               Get the app
             </a>{' '}
-            for Mac, Windows, Linux or Android — whole folders at once, no size limit, and
+            for Mac, Windows, Linux or Android, whole folders at once, no size limit, and
             downloads that carry on after a restart.
           </p>
         )}
@@ -341,7 +341,7 @@ export function App() {
 
       {signedIn && !settled && saved.items.length > 0 && (
         /* Signed in, and only in the idle state. Signed in because the list is the names of
-           things you meant to download — showing it on the locked screen leaks them to anyone
+           things you meant to download, showing it on the locked screen leaks them to anyone
            who opens the page. Idle only because once a torrent is open the list is answering a
            question you have already answered. */
         <section className="n-card n-card-pad n-stack flai-tight flai-rise" aria-labelledby="saved-title">

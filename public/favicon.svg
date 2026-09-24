@@ -16,8 +16,8 @@
     (Token names are written without their leading dashes on purpose: a double hyphen is not
     legal inside an XML comment.)
   -->
-  <rect width="32" height="32" rx="7.5" fill="#8a7ef7" />
-  <g fill="#101014" stroke="#101014" stroke-width="2.5" stroke-linejoin="round">
+  <rect width="32" height="32" rx="7.5" fill="#1634c2" />
+  <g fill="#f4f4f6" stroke="#f4f4f6" stroke-width="2.5" stroke-linejoin="round">
     <!-- Stem and head overlap by a pixel so no seam shows where they meet. -->
     <rect x="13.6" y="6.4" width="4.8" height="10.4" rx="2.4" stroke="none" />
     <path d="M16 24.2 8.1 15.4h15.8Z" />

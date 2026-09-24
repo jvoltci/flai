@@ -7,7 +7,7 @@ export function formatBytes(n: number): string {
 }
 
 export function formatSpeed(bytesPerSec: number): string {
-  if (!Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return '—';
+  if (!Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return '·';
   return `${formatBytes(bytesPerSec)}/s`;
 }
 

@@ -24,7 +24,7 @@ type Panel = 'none' | 'search' | 'settings';
 type Selection = Set<number>;
 
 /* The same two-tone split the web page uses, so the app reads as the same thing. <b> is here
- * for the colour offset, not for weight — hence font-weight: inherit in the stylesheet. */
+ * for the colour offset, not for weight, hence font-weight: inherit in the stylesheet. */
 function Wordmark() {
   return (
     <h1 className="flai-wordmark">
@@ -55,7 +55,7 @@ export function App() {
   }, [theme]);
 
   /* Polling, not events. The list is at most a handful of rows and the call is an in-process
-   * function behind an IPC hop — cheaper than the machinery to push, and it cannot get stuck
+   * function behind an IPC hop, cheaper than the machinery to push, and it cannot get stuck
    * out of sync with the engine the way a missed event can. */
   useEffect(() => {
     let alive = true;
@@ -248,7 +248,7 @@ export function App() {
       <section className="flai-list">
         {rows.length === 0 && !info && (
           <p className="flai-empty">
-            Nothing downloading. Paste a magnet above — files land in a folder you choose, at full
+            Nothing downloading. Paste a magnet above, files land in a folder you choose, at full
             speed, and carry on where they left off if you close the app.
           </p>
         )}
@@ -275,7 +275,7 @@ export function App() {
 /* Two platforms, two right answers.
  *
  * A desktop has a file manager, so "Show" reveals the folder in Finder or Explorer. Android has
- * no such thing, so the useful action is handing the file to whatever app can play it — which
+ * no such thing, so the useful action is handing the file to whatever app can play it, which
  * is also why flai contains no video player: the content is HEVC with EAC3, a WebView cannot
  * play it, and VLC on the same phone can. */
 async function reveal(path: string) {

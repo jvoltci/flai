@@ -3,7 +3,7 @@ import type { Metadata } from './api';
 
 /* The saved list.
  *
- * A magnet is the only thing needed to get a torrent back, and it is a short string — so this
+ * A magnet is the only thing needed to get a torrent back, and it is a short string, so this
  * is localStorage, not IndexedDB. IndexedDB earns its keep when there is something in the data
  * that cannot be a string; here there is not, and a synchronous read means the list is on
  * screen in the first paint rather than a frame later.
@@ -44,11 +44,11 @@ function write(list: SavedTorrent[]): void {
     localStorage.setItem(KEY, JSON.stringify(list));
   } catch {
     /* Quota or a private window with storage off. Losing the list is not worth an error
-     * dialogue over — the download you are doing right now still works. */
+     * dialogue over, the download you are doing right now still works. */
   }
 }
 
-/* One event so two mounted components — the list and the star — cannot disagree. `storage`
+/* One event so two mounted components, the list and the star, cannot disagree. `storage`
  * only fires in *other* tabs, so same-tab updates need their own. */
 const CHANGED = 'flai:wishlist';
 

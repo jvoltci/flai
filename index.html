@@ -9,19 +9,19 @@
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <link rel="apple-touch-icon" href="%BASE_URL%flai.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- The sRGB of --neutral-1 in dark mode, oklch(0.1750 0.0070 285) — the colour body
+    <!-- The sRGB of --neutral-1 in dark mode, oklch(0.1750 0.0070 285), the colour body
          paints under the photograph. Converted through OKLab rather than eyeballed; the same
          conversion reproduces nilam's own published #8a7ef7 for --brand-9, and #202020 for
          --surface, which is what the rendered card measures. A <meta> value must be a colour
          literal, so this is the ONE place in the project that cannot use var(). It was
          #0a0a0a, which matched nothing in the palette. Re-derive if the hue is re-solved. -->
-    <meta name="theme-color" content="#101014" />
-    <meta name="description" content="flai — paste a magnet, stream or download in your browser." />
+    <meta name="theme-color" content="#0f1014" />
+    <meta name="description" content="flai: paste a magnet, stream or download in your browser." />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <!-- The photograph stays here rather than moving to styles.css because the path needs
          Vite's %BASE_URL% substitution. The scrim rides along for the same reason: it has
          to be a background LAYER above the image, and layers cannot be split across two
-         rules. --scrim twice, not once — the measurement is in src/styles.css. -->
+         rules. --scrim twice, not once, the measurement is in src/styles.css. -->
     <style>
       body {
         background-image:

@@ -1,21 +1,26 @@
 /* === nilam design system (replaces the Bootstrap 4 CDN link) ==================
  * Order matters: tokens → scale → base → components. nilam.tokens.css declares the
- * @layer order. No tailwind.css import — this project does not use Tailwind. */
+ * @layer order. No tailwind.css import, this project does not use Tailwind. */
 @import 'nilam/tokens.css';
+/* The Altrusian theme (src/theme, copied whole from one/altrusian/design): the same
+ * token names solved from #1634C2, appended to nilam.tokens so they win; Inter. */
+@import '@fontsource-variable/inter/wght.css';
+@import './theme/altrusian.tokens.css';
+@import './theme/altrusian.css';
 @import 'nilam/scale.css';
 @import 'nilam/base.css';
 @import 'nilam/components.css';
 /* Not decoration. nilam.base carries the usual blanket
    `@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important } }`,
    which is right for ornament and wrong for a loader: frozen, a spinner does not read as
-   "motion reduced", it reads as "this has hung". motion.css re-exempts the loaders — and has
+   "motion reduced", it reads as "this has hung". motion.css re-exempts the loaders, and has
    to be imported to sit in the first layer, because !important declarations resolve in the
    REVERSE of layer order, so a later layer cannot win it back. flai leans on the spinner and
    the skeleton for the one slow moment it has, the cold start. */
 @import 'nilam/motion.css';
 
 /* Everything flai adds goes in @layer nilam.utilities, which is the last layer nilam
- * declares — the same thing demo/index.html does with its page-local rules.
+ * declares, the same thing demo/index.html does with its page-local rules.
  *
  * The previous version of this file was UNLAYERED, and unlayered author CSS beats every
  * cascade layer no matter how weak its selector. That is how `#u2, #u3 { color: red }`
@@ -25,7 +30,7 @@
  * override shows up as a specificity question instead of an invisible bypass.
  *
  * There is not one colour literal below this line. Every value is a nilam token. The project
- * has exactly two exceptions, both documented where they sit and both for the same reason —
+ * has exactly two exceptions, both documented where they sit and both for the same reason,
  * neither can take a var(): the <meta name="theme-color"> in index.html, and
  * public/favicon.svg, which is copied verbatim and never sees this stylesheet.
  */
@@ -46,16 +51,16 @@
    *   two --scrim       6.78:1   passes 1.4.3 body text at 4.5:1
    *
    * Hence two layers, in index.html. Alpha composites in gamma-encoded sRGB, so 0.6 black
-   * twice multiplies the image by 0.4 twice = 0.16 — an effective alpha of 0.84 that is
+   * twice multiplies the image by 0.4 twice = 0.16, an effective alpha of 0.84 that is
    * still composed entirely from a token, where a hand-written 0.84 would not be.
    *
    * Two layers also fixes a second thing. One layer leaves that patch at OKLab L 0.47,
    * which is LIGHTER than --surface (0.2455), so an .n-card over it reads as a hole
    * rather than a raised surface and --rim's top light points the wrong way. Two layers
-   * bring it to L 0.262 — level with the card, and darker everywhere else in the frame.
+   * bring it to L 0.262, level with the card, and darker everywhere else in the frame.
    *
    * Confirmed against the rendered page rather than left as arithmetic: sampling the brightest
-   * 1/256 of the photo where no card covers it gives sRGB(36,37,31), Y 0.0180, L 0.262 —
+   * 1/256 of the photo where no card covers it gives sRGB(36,37,31), Y 0.0180, L 0.262,
    * within one 8-bit step of the prediction above.
    *
    * The scrim is atmosphere. The guarantee is that every piece of text on this page sits
@@ -69,7 +74,7 @@
     background-repeat: no-repeat;
     background-attachment: fixed;
 
-    /* Sticky footer, without position: absolute — see the footer note below. */
+    /* Sticky footer, without position: absolute, see the footer note below. */
     display: flex;
     flex-direction: column;
     min-block-size: 100dvh;
@@ -83,7 +88,7 @@
   /* ── footer ───────────────────────────────────────────────────────────────
    *
    * Was `position: absolute; left: 0; bottom: 0` with no positioned ancestor anywhere in
-   * the tree, so `bottom: 0` resolved against the initial containing block — the FIRST
+   * the tree, so `bottom: 0` resolved against the initial containing block, the FIRST
    * viewport, not the document. Any page taller than the screen painted the footer on top
    * of its own content; with the player open it sat across the video.
    *
@@ -115,7 +120,7 @@
    *
    * A brand-tinted wash falling from the top edge, over the photograph and under everything
    * else. It is the one piece of pure atmosphere on the page and it earns its place by giving
-   * the wordmark something to sit in front of — without it the display type floats on a flat
+   * the wordmark something to sit in front of, without it the display type floats on a flat
    * scrim and reads as unplaced.
    *
    * color-mix rather than an alpha literal, so the hue tracks --brand-9 if the palette is
@@ -135,8 +140,8 @@
       /* And under it, the reason this is two layers rather than one.
        *
        * The hero is the first text in this project to sit on the photograph instead of on a
-       * card, so the rule the measurements above were written to protect — "every piece of
-       * text sits on an .n-card, never on the photo" — no longer holds on its own. The two
+       * card, so the rule the measurements above were written to protect, "every piece of
+       * text sits on an .n-card, never on the photo", no longer holds on its own. The two
        * --scrim layers bring the brightest patch to OKLab L 0.262, but nilam's steps are
        * solved against the page colour, --neutral-1 at L 0.175. A lighter background than the
        * token assumed means --neutral-11, the quiet step used by .n-hint, lands under the
@@ -144,7 +149,7 @@
        *
        * So the top of the page is pulled back to the page colour and the photograph is let
        * back in below the fold, where nothing but the footer sits on it. Reasoned from the
-       * measurements above rather than re-measured on screen — worth a sampling pass if the
+       * measurements above rather than re-measured on screen, worth a sampling pass if the
        * photograph is ever changed. */
       linear-gradient(
         to bottom,
@@ -185,7 +190,7 @@
    * effect: the point is that things arrive rather than blink into place.
    *
    * nilam.base's blanket `* { animation-duration: 0.01ms !important }` under
-   * prefers-reduced-motion collapses this to its end state, which is exactly right — `both`
+   * prefers-reduced-motion collapses this to its end state, which is exactly right, `both`
    * means the element lands opaque and in position. Nothing to opt out of by hand. */
   @keyframes flai-rise {
     from { opacity: 0; translate: 0 var(--space-3); }
@@ -261,7 +266,7 @@
    * the page uses it, which is what a display size is for.
    *
    * nilam.base sets -0.02em on every heading, tuned for heading sizes. At the top of the
-   * clamp — 7.5rem, 120px at a 1280px viewport — that still reads loose, so -0.045em, the
+   * clamp, 7.5rem, 120px at a 1280px viewport, that still reads loose, so -0.045em, the
    * value the nilam showcase uses on its own display heading. */
   .flai-word {
     font-size: var(--text-display);
@@ -272,7 +277,7 @@
   /* --brand-11, not --brand-9. Step 11 is the text step, solved for 4.5:1 against step 3;
      step 9 is the solid, and using it as text is the mistake it invites. `font-weight:
      inherit` because <b> is UA-bold and bold at 120px is exactly what the note above
-     forbids — the tag is here for the stylistic offset, not for weight. */
+     forbids, the tag is here for the stylistic offset, not for weight. */
   .flai-word b { font-weight: inherit; color: var(--brand-11); }
 
 
@@ -353,7 +358,7 @@
   .flai-saved-name { overflow-wrap: anywhere; }
 
   /* The star is the state, not the button. A filled --brand-11 glyph next to a label that also
-     changes is two channels, which is nilam's rule for anything colour-coded — and it keeps a
+     changes is two channels, which is nilam's rule for anything colour-coded, and it keeps a
      toggle from looking like the loudest control on the page. */
   .flai-star { color: var(--brand-11); }
   /* Centred, so an empty table reads as "no match" rather than as broken. */
@@ -373,7 +378,7 @@
    * nilam styles the invalid input as `.n-input:user-invalid`, which only fires on a real
    * constraint violation. "Not a magnet URI" is flai's own rule on a type="text" field, so
    * the browser considers it valid and the border stayed --neutral-7 while the .n-error text
-   * below it said otherwise — measured, in Chrome. nilam has no [aria-invalid] hook.
+   * below it said otherwise, measured, in Chrome. nilam has no [aria-invalid] hook.
    *
    * These two lines are a copy of nilam's own :user-invalid declarations, same tokens, so an
    * app-validated field looks identical to a browser-validated one. Reported upstream. */
@@ -382,11 +387,11 @@
 
   /* ── the file list ────────────────────────────────────────────────────────
    *
-   * The product. It was an unstyled <ul> nested inside another <ul> — invalid markup, and
+   * The product. It was an unstyled <ul> nested inside another <ul>, invalid markup, and
    * a 400x200px scroll box with the scrollbar hidden. Now a real .n-table inside the card.
    *
    * Capped so a 300-file torrent cannot push the zip button off the page. 26rem is about
-   * seven rows at the measured row height, which is where the old 200px box topped out —
+   * seven rows at the measured row height, which is where the old 200px box topped out,
    * but this one shows its scrollbar and takes tabindex="0", which is the 2.1.1 point
    * nilam's .n-table-scroll note makes.
    *
@@ -415,7 +420,7 @@
 
   /* Four columns do not fit on a phone. Measured at 420px: the card gives the table 372px,
      and name (11rem min) + Kind badge + Size + Play + Save wants about 460px, so Play and
-     Save — the primary action of the whole app — were clipped at the card edge and only
+     Save, the primary action of the whole app, were clipped at the card edge and only
      reachable by horizontally scrolling the region.
      Kind is the column that goes, because it is the only one derivable from what is left: a
      Play button in the row already says the file is streamable, and the extension is in the
@@ -430,7 +435,7 @@
 
   /* The row being played. --brand-2 is the brand's "subtle page" step: oklch(0.2126 0.02 285)
      in dark mode against the card's oklch(0.2455 0 285), so the row reads a shade darker and
-     faintly violet — enough to find without competing with the glow on the button in the same
+     faintly violet, enough to find without competing with the glow on the button in the same
      row. This rule lands in nilam.utilities so it also beats .n-table tbody tr:hover, which is
      correct: hovering the playing row should not erase which row is playing. */
   .n-table tr[data-playing] td { background: var(--brand-2); }
@@ -441,16 +446,16 @@
    *
    * .n-skeleton is nearly invisible on an .n-card in dark mode, and it is a token collision
    * rather than a mistake in either place. .n-card paints --surface, oklch(0.2455 0 285) in
-   * dark mode; .n-skeleton's base gradient stop is --neutral-3, oklch(0.2455 0.0070 285) —
+   * dark mode; .n-skeleton's base gradient stop is --neutral-3, oklch(0.2455 0.0070 285),
    * the SAME lightness, differing only by 0.007 of chroma. Measured on screen: only the
    * --neutral-4 shimmer stop (L 0.273) showed at all, and only while travelling.
    *
    * So the loading card drops to --neutral-2 (L 0.2120), which puts a whole step of the ramp
-   * under the skeleton. Reported upstream rather than papered over — it affects nilam's own
+   * under the skeleton. Reported upstream rather than papered over, it affects nilam's own
    * showcase, which also puts skeletons on .n-card.
    *
    * Row pitch matched to the real thing. Measured in Chrome at 1280px: a .n-table row is
-   * 53px — --text-0 content plus .n-table td's var(--space-3) top and bottom padding — and a
+   * 53px, --text-0 content plus .n-table td's var(--space-3) top and bottom padding, and a
    * 22px skeleton line on a var(--space-6) gap is 54px. One pixel per row. The row COUNT is
    * the part that cannot be known before the metadata lands, so the card still changes
    * height when it arrives; that is a limit of the situation, not of the skeleton. */
@@ -467,7 +472,7 @@
   /* ── player ───────────────────────────────────────────────────────────────
    *
    * Was `.player-wrap`: a hand-rolled rgba(255,255,255,0.85) card with `h4 { color: #222 }`
-   * sitting on a dark page — a light card in a dark app, off-token on both counts. It is an
+   * sitting on a dark page, a light card in a dark app, off-token on both counts. It is an
    * .n-card now and the heading sets no colour at all, so it inherits --neutral-12 and
    * follows the mode.
    *

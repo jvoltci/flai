@@ -38,7 +38,7 @@ export class ApiError extends Error {
 const TOKEN_KEY = 'flai.token';
 const EXP_KEY = 'flai.token.expiresAt';
 
-/* localStorage, so closing the tab does not end the session — the token outlives the browser
+/* localStorage, so closing the tab does not end the session, the token outlives the browser
  * and you sign in once a day rather than once a visit.
  *
  * This was sessionStorage, on the reasoning that a bearer credential should be scoped to the
@@ -96,7 +96,7 @@ export class ApiClient {
 
   /* The download link carries its own magnet, which is what lets it heal itself. The bridge
    * stores nothing, so after a spin-down or a redeploy it has no way to find this torrent
-   * again — but the URL Chrome is retrying has everything needed to re-add it. That is how a
+   * again, but the URL Chrome is retrying has everything needed to re-add it. That is how a
    * native download survives a server restart with no JavaScript involved at all. */
   downloadUrl(infoHash: string, fileIndex: number, magnet: string): string {
     const url = new URL(this.streamUrl(infoHash, fileIndex));
@@ -107,7 +107,7 @@ export class ApiClient {
 
   /* Asks whether a download would be served, before handing the URL to the browser.
    *
-   * Once the download manager has a URL the page gets no say in it — a 409 is not an error the
+   * Once the download manager has a URL the page gets no say in it, a 409 is not an error the
    * user sees, it is a 120-byte JSON file saved under the name of the episode they wanted. One
    * round trip, and it reads no bytes from the swarm. */
   async probe(infoHash: string, fileIndex: number, magnet: string): Promise<void> {
